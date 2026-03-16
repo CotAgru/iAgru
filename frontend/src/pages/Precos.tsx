@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Plus, Pencil, Trash2, X, Loader2, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
 
@@ -36,27 +36,61 @@ export default function Precos() {
   }
   useEffect(() => { load() }, [])
 
-  // Calcular distancia automatica via Directions API
+  // Carregar Google Maps script para usar DistanceMatrixService
+  const mapsLoaded = useRef(false)
+  useEffect(() => {
+    if (!GOOGLE_MAPS_API_KEY || mapsLoaded.current) return
+    if ((window as any).google?.maps) { mapsLoaded.current = true; return }
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`
+    script.async = true
+    script.onload = () => { mapsLoaded.current = true }
+    document.head.appendChild(script)
+  }, [])
+
+  // Calcular distancia automatica via DistanceMatrixService (client-side, sem CORS)
   const calcularDistancia = async (origemId: string, destinoId: string) => {
     if (!origemId || !destinoId || !GOOGLE_MAPS_API_KEY) return
     const origem = allCadastros.find((c: any) => c.id === origemId)
     const destino = allCadastros.find((c: any) => c.id === destinoId)
     if (!origem || !destino) return
-    const origemStr = origem.latitude && origem.longitude
-      ? `${origem.latitude},${origem.longitude}`
+
+    const origemLatLng = origem.latitude && origem.longitude
+      ? { lat: origem.latitude, lng: origem.longitude }
+      : null
+    const destinoLatLng = destino.latitude && destino.longitude
+      ? { lat: destino.latitude, lng: destino.longitude }
+      : null
+
+    const origemReq = origemLatLng
+      ? new google.maps.LatLng(origemLatLng.lat, origemLatLng.lng)
       : `${origem.cidade}, ${origem.uf}, Brasil`
-    const destinoStr = destino.latitude && destino.longitude
-      ? `${destino.latitude},${destino.longitude}`
+    const destinoReq = destinoLatLng
+      ? new google.maps.LatLng(destinoLatLng.lat, destinoLatLng.lng)
       : `${destino.cidade}, ${destino.uf}, Brasil`
+
+    // Esperar Google Maps carregar
+    const waitForMaps = () => new Promise<void>((resolve) => {
+      const check = () => { if ((window as any).google?.maps) resolve(); else setTimeout(check, 200) }
+      check()
+    })
+    await waitForMaps()
+
     setCalcDist(true)
     try {
-      const resp = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origemStr)}&destination=${encodeURIComponent(destinoStr)}&key=${GOOGLE_MAPS_API_KEY}`)
-      const data = await resp.json()
-      if (data.routes?.[0]?.legs?.[0]?.distance) {
-        const km = Math.round(data.routes[0].legs[0].distance.value / 1000)
+      const service = new google.maps.DistanceMatrixService()
+      const result = await service.getDistanceMatrix({
+        origins: [origemReq],
+        destinations: [destinoReq],
+        travelMode: google.maps.TravelMode.DRIVING,
+      })
+      const element = result.rows?.[0]?.elements?.[0]
+      if (element?.status === 'OK' && element.distance) {
+        const km = Math.round(element.distance.value / 1000)
         setForm(prev => ({ ...prev, distancia_km: km.toString() }))
+        toast.success(`Distancia calculada: ${km} km`)
       }
-    } catch { /* silencioso */ }
+    } catch (err) { console.error('Erro ao calcular distancia:', err) }
     finally { setCalcDist(false) }
   }
 
@@ -105,6 +139,71 @@ export default function Precos() {
 
   const fmtCur = (v: number) => v?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+  // Gerar documento de detalhamento do preco
+  const gerarDocumento = (item: any) => {
+    const origem = allCadastros.find((c: any) => c.id === item.origem_id)
+    const destino = allCadastros.find((c: any) => c.id === item.destino_id)
+    const fornecedor = item.fornecedor_id ? allCadastros.find((c: any) => c.id === item.fornecedor_id) : null
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Detalhamento de Preco - FretAgru</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+  .header { text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 15px; margin-bottom: 20px; }
+  .header h1 { color: #16a34a; margin: 0; font-size: 24px; }
+  .header p { color: #666; margin: 5px 0 0; }
+  .section { margin-bottom: 20px; }
+  .section h2 { font-size: 16px; color: #16a34a; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field { padding: 8px; background: #f9fafb; border-radius: 6px; }
+  .field label { font-size: 11px; color: #888; display: block; }
+  .field span { font-size: 14px; font-weight: 600; }
+  .valor-destaque { text-align: center; padding: 20px; background: #f0fdf4; border: 2px solid #16a34a; border-radius: 10px; margin: 15px 0; }
+  .valor-destaque .valor { font-size: 32px; font-weight: bold; color: #16a34a; }
+  .valor-destaque .unidade { font-size: 14px; color: #666; }
+  .rota { padding: 15px; background: #eff6ff; border-radius: 10px; text-align: center; }
+  .rota .distancia { font-size: 24px; font-weight: bold; color: #2563eb; }
+  .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <div class="header">
+    <h1>FretAgru - Detalhamento de Preco</h1>
+    <p>Documento gerado em ${new Date().toLocaleDateString('pt-BR')} as ${new Date().toLocaleTimeString('pt-BR')}</p>
+  </div>
+  <div class="section">
+    <h2>Rota</h2>
+    <div class="grid">
+      <div class="field"><label>Origem</label><span>${item.origem_nome || '-'}</span></div>
+      <div class="field"><label>Destino</label><span>${item.destino_nome || '-'}</span></div>
+      <div class="field"><label>Cidade Origem</label><span>${origem?.cidade || '-'}/${origem?.uf || '-'}</span></div>
+      <div class="field"><label>Cidade Destino</label><span>${destino?.cidade || '-'}/${destino?.uf || '-'}</span></div>
+    </div>
+    ${item.distancia_km ? `<div class="rota" style="margin-top:10px"><div class="distancia">${item.distancia_km} km</div><div style="color:#666;font-size:12px">Distancia estimada via rota rodoviaria</div></div>` : ''}
+  </div>
+  <div class="section">
+    <h2>Produto e Transportador</h2>
+    <div class="grid">
+      <div class="field"><label>Produto</label><span>${item.produto_nome || '-'}</span></div>
+      <div class="field"><label>Transportador</label><span>${item.fornecedor_nome || 'Preco Geral (todos)'}</span></div>
+    </div>
+  </div>
+  <div class="valor-destaque">
+    <div class="valor">${fmtCur(item.valor)}</div>
+    <div class="unidade">${item.unidade_preco}</div>
+  </div>
+  ${item.observacoes ? `<div class="section"><h2>Observacoes</h2><p>${item.observacoes}</p></div>` : ''}
+  <div class="footer">
+    <p>FretAgru - iAgru Ecossistema | Documento informativo de precificacao de frete</p>
+  </div>
+</body></html>`
+
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
+    if (win) win.onload = () => { URL.revokeObjectURL(url) }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -135,6 +234,7 @@ export default function Precos() {
                   <td className="px-4 py-3 text-right font-semibold text-green-700">{fmtCur(item.valor)} <span className="text-xs text-gray-400 font-normal">{item.unidade_preco}</span></td>
                   <td className="px-4 py-3 text-right text-gray-600">{item.distancia_km ? `${item.distancia_km} km` : '-'}</td>
                   <td className="px-4 py-3 text-right space-x-1">
+                    <button onClick={() => gerarDocumento(item)} title="Gerar documento" className="p-1.5 text-green-600 hover:bg-green-50 rounded"><FileDown className="w-4 h-4" /></button>
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>

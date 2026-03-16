@@ -102,10 +102,7 @@ export const getOrdens = async () => {
       *,
       origem:cadastros!ordens_carregamento_origem_id_fkey(nome, nome_fantasia),
       destino:cadastros!ordens_carregamento_destino_id_fkey(nome, nome_fantasia),
-      produtos(nome, tipo),
-      transportador:cadastros!ordens_carregamento_transportador_id_fkey(nome, nome_fantasia),
-      motorista:cadastros!ordens_carregamento_motorista_id_fkey(nome, nome_fantasia),
-      veiculos(placa, tipo_caminhao)
+      produtos(nome, tipo)
     `)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -114,9 +111,6 @@ export const getOrdens = async () => {
     origem_nome: o.origem?.nome_fantasia || o.origem?.nome,
     destino_nome: o.destino?.nome_fantasia || o.destino?.nome,
     produto_nome: o.produtos?.nome,
-    transportador_nome: o.transportador?.nome_fantasia || o.transportador?.nome,
-    motorista_nome: o.motorista?.nome_fantasia || o.motorista?.nome,
-    veiculo_placa: o.veiculos?.placa,
   }))
 }
 
@@ -129,9 +123,39 @@ export const updateOrdem = async (id: string, data: any) =>
 export const deleteOrdem = async (id: string) =>
   throwIfError(await supabase.from('ordens_carregamento').delete().eq('id', id))
 
+// === ORDEM_TRANSPORTADORES (junction) ===
+export const getOrdemTransportadores = async (ordemId: string) => {
+  const { data, error } = await supabase
+    .from('ordem_transportadores')
+    .select(`
+      *,
+      transportador:cadastros!ordem_transportadores_transportador_id_fkey(id, nome, nome_fantasia),
+      motorista:cadastros!ordem_transportadores_motorista_id_fkey(id, nome, nome_fantasia),
+      veiculos(id, placa, tipo_caminhao)
+    `)
+    .eq('ordem_id', ordemId)
+  if (error) throw error
+  return data
+}
+
+export const addOrdemTransportador = async (data: any) =>
+  throwIfError(await supabase.from('ordem_transportadores').insert(data).select().single())
+
+export const removeOrdemTransportador = async (id: string) =>
+  throwIfError(await supabase.from('ordem_transportadores').delete().eq('id', id))
+
 // === ROMANEIOS ===
-export const getRomaneios = async () =>
-  throwIfError(await supabase.from('romaneios').select('*').order('created_at', { ascending: false }))
+export const getRomaneios = async () => {
+  const { data, error } = await supabase
+    .from('romaneios')
+    .select(`*, ordens_carregamento(numero_ordem_fmt, nome_ordem)`)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((r: any) => ({
+    ...r,
+    ordem_nome: r.ordens_carregamento?.nome_ordem || r.ordens_carregamento?.numero_ordem_fmt || null,
+  }))
+}
 
 export const createRomaneio = async (data: any) =>
   throwIfError(await supabase.from('romaneios').insert(data).select().single())

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio } from '../services/api'
+import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens } from '../services/api'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 
@@ -12,6 +12,7 @@ const TIPOS_DOC = [
 ]
 
 const emptyForm = {
+  ordem_id: '',
   numero_ticket: '', tipo_documento: 'ticket_pesagem', data_emissao: '',
   local_pesagem: '', fornecedor_destinatario: '', produtor: '',
   cnpj_cpf: '', placa: '', motorista: '', transportadora: '',
@@ -26,6 +27,7 @@ const emptyForm = {
 
 export default function Romaneios() {
   const [items, setItems] = useState<any[]>([])
+  const [ordens, setOrdens] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -37,7 +39,10 @@ export default function Romaneios() {
 
   const load = () => {
     setLoading(true)
-    getRomaneios().then(setItems).catch(() => toast.error('Erro ao carregar')).finally(() => setLoading(false))
+    Promise.all([getRomaneios(), getOrdens()])
+      .then(([r, o]) => { setItems(r); setOrdens(o) })
+      .catch(() => toast.error('Erro ao carregar'))
+      .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
 
@@ -45,6 +50,7 @@ export default function Romaneios() {
   const openEdit = (item: any) => {
     setEditing(item)
     setForm({
+      ordem_id: item.ordem_id || '',
       numero_ticket: item.numero_ticket || '', tipo_documento: item.tipo_documento || 'ticket_pesagem',
       data_emissao: item.data_emissao || '', local_pesagem: item.local_pesagem || '',
       fornecedor_destinatario: item.fornecedor_destinatario || '', produtor: item.produtor || '',
@@ -181,6 +187,7 @@ Use 0 para campos numericos nao encontrados e "" para textos. Pesos em KG.`
   }
 
   const save = async () => {
+    if (!form.ordem_id) { toast.error('Selecione uma Ordem de Carregamento'); return }
     const payload: any = {}
     Object.entries(form).forEach(([k, v]) => {
       if (['peso_bruto','tara','peso_liquido','umidade_perc','impureza_perc','avariados_perc','ardidos_perc','esverdeados_perc','partidos_perc','quebrados_perc','desconto_kg','peso_corrigido'].includes(k)) {
@@ -223,6 +230,7 @@ Use 0 para campos numericos nao encontrados e "" para textos. Pesos em KG.`
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Ordem</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Ticket</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Tipo</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Data</th>
@@ -236,6 +244,7 @@ Use 0 para campos numericos nao encontrados e "" para textos. Pesos em KG.`
             <tbody className="divide-y">
               {items.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-xs text-blue-600 font-semibold">{item.ordem_nome || '-'}</td>
                   <td className="px-4 py-3 font-mono text-xs">{item.numero_ticket || '-'}</td>
                   <td className="px-4 py-3 text-xs">{TIPOS_DOC.find(t => t.value === item.tipo_documento)?.label || item.tipo_documento}</td>
                   <td className="px-4 py-3 text-gray-600">{item.data_emissao || '-'}</td>
@@ -249,7 +258,7 @@ Use 0 para campos numericos nao encontrados e "" para textos. Pesos em KG.`
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhum romaneio cadastrado</td></tr>}
+              {items.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Nenhum romaneio cadastrado</td></tr>}
             </tbody>
           </table>
         </div>
@@ -263,6 +272,20 @@ Use 0 para campos numericos nao encontrados e "" para textos. Pesos em KG.`
               <button onClick={() => setShowForm(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 space-y-4">
+
+              {/* Ordem de Carregamento vinculada */}
+              <div className="border-2 border-orange-200 bg-orange-50 rounded-lg p-3">
+                <label className="block text-sm font-semibold text-orange-700 mb-1">Ordem de Carregamento *</label>
+                <select value={form.ordem_id} onChange={e => setForm({...form, ordem_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white">
+                  <option value="">Selecione a Ordem...</option>
+                  {ordens.map((o: any) => (
+                    <option key={o.id} value={o.id}>
+                      {o.numero_ordem_fmt || o.numero_ordem} - {o.nome_ordem || ''} ({o.origem_nome} → {o.destino_nome})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* Upload / Camera com OCR */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">

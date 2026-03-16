@@ -35,6 +35,7 @@ interface Cadastro {
   latitude: number | null
   longitude: number | null
   observacoes: string | null
+  transportador_id: string | null
   ativo: boolean
 }
 
@@ -45,7 +46,7 @@ const emptyForm = {
   cpf_cnpj: '', nome: '', nome_fantasia: '', telefone1: '', telefone2: '',
   uf: 'GO', cidade: '', tipos: [] as string[],
   latitude: null as number | null, longitude: null as number | null,
-  observacoes: '', ativo: true,
+  observacoes: '', transportador_id: '', ativo: true,
 }
 
 const emptyVeiculoForm = { placa: '', tipo_caminhao: 'Carreta', eixos: 6, peso_pauta_kg: 37000, marca: '', modelo: '', ano: '' }
@@ -183,6 +184,13 @@ export default function Cadastros() {
 
   const mostraLocalizacao = form.tipos.some(t => TIPOS_COM_LOCALIZACAO.includes(t))
   const mostraMotorista = form.tipos.includes('Motorista')
+  const mostraTransportadora = form.tipos.includes('Transportadora')
+
+  // Listas filtradas para vinculos
+  const transportadorasList = items.filter(i => (i.tipos || []).includes('Transportadora'))
+  const motoristasVinculados = editing && mostraTransportadora
+    ? items.filter(i => (i.tipos || []).includes('Motorista') && i.transportador_id === editing.id)
+    : []
 
   const openNew = () => { setEditing(null); setForm(emptyForm); setSavedMotoristaId(null); setShowForm(true) }
   const openEdit = (item: Cadastro) => {
@@ -192,7 +200,7 @@ export default function Cadastros() {
       telefone1: item.telefone1 || '', telefone2: item.telefone2 || '',
       uf: item.uf, cidade: item.cidade, tipos: item.tipos || [],
       latitude: item.latitude, longitude: item.longitude,
-      observacoes: item.observacoes || '', ativo: item.ativo,
+      observacoes: item.observacoes || '', transportador_id: item.transportador_id || '', ativo: item.ativo,
     })
     setSavedMotoristaId(item.id)
     setShowForm(true)
@@ -212,6 +220,7 @@ export default function Cadastros() {
       observacoes: form.observacoes || null,
       latitude: form.latitude || null,
       longitude: form.longitude || null,
+      transportador_id: form.transportador_id || null,
     }
     try {
       let result: any
@@ -485,6 +494,37 @@ export default function Cadastros() {
                   )}
                   {form.latitude && form.longitude && (
                     <p className="text-xs text-gray-500 mt-1">Lat: {form.latitude.toFixed(6)}, Lng: {form.longitude.toFixed(6)}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Vincular Motorista a Transportadora */}
+              {mostraMotorista && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transportadora (vinculo)</label>
+                  <select value={form.transportador_id} onChange={e => setForm({...form, transportador_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="">Autonomo (sem transportadora)</option>
+                    {transportadorasList.map(t => <option key={t.id} value={t.id}>{t.nome_fantasia || t.nome}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Motoristas vinculados (quando tipo Transportadora) */}
+              {mostraTransportadora && editing && (
+                <div className="border border-rose-200 bg-rose-50 rounded-lg p-3">
+                  <span className="text-sm font-medium text-rose-700">Motoristas vinculados a esta Transportadora</span>
+                  {motoristasVinculados.length > 0 ? (
+                    <ul className="mt-2 space-y-1">
+                      {motoristasVinculados.map(m => (
+                        <li key={m.id} className="text-sm text-gray-700 flex items-center gap-2">
+                          <span className="w-2 h-2 bg-rose-400 rounded-full" />
+                          {m.nome_fantasia || m.nome}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Nenhum motorista vinculado. Vincule motoristas editando o cadastro deles e selecionando esta transportadora.</p>
                   )}
                 </div>
               )}
