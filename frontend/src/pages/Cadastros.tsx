@@ -1,14 +1,26 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin } from 'lucide-react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getCadastros, createCadastro, updateCadastro, deleteCadastro } from '../services/api'
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo } from '../services/api'
+import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const DEFAULT_CENTER = { lat: -15.7801, lng: -47.9292 }
 
 const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Transportadora']
 const TIPOS_COM_LOCALIZACAO = ['Fazenda', 'Armazem', 'Industria', 'Porto', 'Fornecedor']
+
+const TIPOS_CAMINHAO = [
+  { nome: 'Toco', eixos: 2, peso_pauta_kg: 8000 },
+  { nome: 'Truck', eixos: 3, peso_pauta_kg: 14000 },
+  { nome: 'Bi-Truck', eixos: 4, peso_pauta_kg: 20000 },
+  { nome: 'Carreta LS', eixos: 5, peso_pauta_kg: 27000 },
+  { nome: 'Carreta', eixos: 6, peso_pauta_kg: 37000 },
+  { nome: 'Bitrem', eixos: 7, peso_pauta_kg: 42000 },
+  { nome: 'Rodotrem', eixos: 9, peso_pauta_kg: 57000 },
+  { nome: 'Treminhao', eixos: 9, peso_pauta_kg: 57000 },
+  { nome: 'Outro', eixos: 0, peso_pauta_kg: 0 },
+]
 
 interface Cadastro {
   id: string
@@ -36,6 +48,43 @@ const emptyForm = {
   observacoes: '', ativo: true,
 }
 
+const emptyVeiculoForm = { placa: '', tipo_caminhao: 'Carreta', eixos: 6, peso_pauta_kg: 37000, marca: '', modelo: '', ano: '' }
+
+// Componente para centralizar o mapa na cidade
+function MapCenterUpdater({ cidade, uf }: { cidade: string; uf: string }) {
+  const map = useMap()
+  const lastSearch = useRef('')
+
+  useEffect(() => {
+    if (!map || !cidade || !uf || !GOOGLE_MAPS_API_KEY) return
+    const key = `${cidade}-${uf}`
+    if (key === lastSearch.current) return
+    lastSearch.current = key
+
+    fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cidade + ', ' + uf + ', Brasil')}&key=${GOOGLE_MAPS_API_KEY}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.results?.[0]) {
+          const { lat, lng } = data.results[0].geometry.location
+          map.panTo({ lat, lng })
+          const bounds = data.results[0].geometry.viewport
+          if (bounds) {
+            const gBounds = new google.maps.LatLngBounds(
+              { lat: bounds.southwest.lat, lng: bounds.southwest.lng },
+              { lat: bounds.northeast.lat, lng: bounds.northeast.lng }
+            )
+            map.fitBounds(gBounds)
+          } else {
+            map.setZoom(12)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [map, cidade, uf])
+
+  return null
+}
+
 export default function Cadastros() {
   const [items, setItems] = useState<Cadastro[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +99,11 @@ export default function Cadastros() {
   const [loadingCnpj, setLoadingCnpj] = useState(false)
   const [loadingCidades, setLoadingCidades] = useState(false)
   const [isCnpj, setIsCnpj] = useState(false)
+
+  // Modal de veiculo inline (motorista)
+  const [showVeiculoForm, setShowVeiculoForm] = useState(false)
+  const [veiculoForm, setVeiculoForm] = useState(emptyVeiculoForm)
+  const [savedMotoristaId, setSavedMotoristaId] = useState<string | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -67,12 +121,12 @@ export default function Cadastros() {
 
   // Carregar cidades quando UF mudar
   const carregarCidades = useCallback((uf: string) => {
-    if (!uf) { setCidades([]); return }
+    if (!uf) { setCidades([]); return Promise.resolve([]) }
     setLoadingCidades(true)
-    fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`)
+    return fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`)
       .then(r => r.json())
-      .then((data: Cidade[]) => setCidades(data))
-      .catch(() => setCidades([]))
+      .then((data: Cidade[]) => { setCidades(data); return data })
+      .catch(() => { setCidades([]); return [] as Cidade[] })
       .finally(() => setLoadingCidades(false))
   }, [])
 
@@ -93,12 +147,25 @@ export default function Cadastros() {
       const resp = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
       if (!resp.ok) throw new Error('CNPJ nao encontrado')
       const data = await resp.json()
+      const novaUf = data.uf || form.uf
+
+      // Carregar cidades da UF retornada e depois setar a cidade
+      let cidadesCarregadas: Cidade[] = []
+      if (novaUf) {
+        cidadesCarregadas = await carregarCidades(novaUf)
+      }
+
+      // Encontrar cidade pelo nome (case-insensitive)
+      const cidadeEncontrada = cidadesCarregadas.find(
+        c => c.nome.toLowerCase() === (data.municipio || '').toLowerCase()
+      )
+
       setForm(prev => ({
         ...prev,
         nome: data.razao_social || prev.nome,
         nome_fantasia: data.nome_fantasia || '',
-        uf: data.uf || prev.uf,
-        cidade: data.municipio || prev.cidade,
+        uf: novaUf,
+        cidade: cidadeEncontrada ? cidadeEncontrada.nome : data.municipio || prev.cidade,
         telefone1: data.ddd_telefone_1 ? `(${data.ddd_telefone_1.substring(0,2)})${data.ddd_telefone_1.substring(2)}` : prev.telefone1,
         telefone2: data.ddd_telefone_2 ? `(${data.ddd_telefone_2.substring(0,2)})${data.ddd_telefone_2.substring(2)}` : prev.telefone2,
       }))
@@ -115,8 +182,9 @@ export default function Cadastros() {
   }
 
   const mostraLocalizacao = form.tipos.some(t => TIPOS_COM_LOCALIZACAO.includes(t))
+  const mostraMotorista = form.tipos.includes('Motorista')
 
-  const openNew = () => { setEditing(null); setForm(emptyForm); setShowForm(true) }
+  const openNew = () => { setEditing(null); setForm(emptyForm); setSavedMotoristaId(null); setShowForm(true) }
   const openEdit = (item: Cadastro) => {
     setEditing(item)
     setForm({
@@ -126,6 +194,7 @@ export default function Cadastros() {
       latitude: item.latitude, longitude: item.longitude,
       observacoes: item.observacoes || '', ativo: item.ativo,
     })
+    setSavedMotoristaId(item.id)
     setShowForm(true)
   }
 
@@ -145,10 +214,45 @@ export default function Cadastros() {
       longitude: form.longitude || null,
     }
     try {
-      if (editing) { await updateCadastro(editing.id, payload); toast.success('Cadastro atualizado') }
-      else { await createCadastro(payload); toast.success('Cadastro criado') }
-      setShowForm(false); load()
+      let result: any
+      if (editing) { result = await updateCadastro(editing.id, payload); toast.success('Cadastro atualizado') }
+      else { result = await createCadastro(payload); toast.success('Cadastro criado') }
+      setSavedMotoristaId(result?.id || editing?.id || null)
+      if (mostraMotorista && !editing) {
+        // Manter form aberto para permitir cadastrar veiculo
+        setEditing(result)
+      } else {
+        setShowForm(false)
+      }
+      load()
     } catch { toast.error('Erro ao salvar') }
+  }
+
+  const onVeiculoTipoChange = (tipo: string) => {
+    const found = TIPOS_CAMINHAO.find(t => t.nome === tipo)
+    setVeiculoForm(prev => ({ ...prev, tipo_caminhao: tipo, eixos: found?.eixos ?? 0, peso_pauta_kg: found?.peso_pauta_kg ?? 0 }))
+  }
+
+  const saveVeiculo = async () => {
+    const ownerId = savedMotoristaId || editing?.id
+    if (!ownerId) { toast.error('Salve o cadastro do motorista primeiro'); return }
+    if (!veiculoForm.placa) { toast.error('Placa e obrigatoria'); return }
+    try {
+      await createVeiculo({
+        cadastro_id: ownerId,
+        placa: veiculoForm.placa.toUpperCase(),
+        tipo_caminhao: veiculoForm.tipo_caminhao,
+        eixos: veiculoForm.eixos,
+        peso_pauta_kg: veiculoForm.peso_pauta_kg,
+        marca: veiculoForm.marca || null,
+        modelo: veiculoForm.modelo || null,
+        ano: veiculoForm.ano ? Number(veiculoForm.ano) : null,
+        ativo: true,
+      })
+      toast.success('Veiculo cadastrado e vinculado!')
+      setShowVeiculoForm(false)
+      setVeiculoForm(emptyVeiculoForm)
+    } catch { toast.error('Erro ao cadastrar veiculo') }
   }
 
   const remove = async (id: string) => {
@@ -362,6 +466,7 @@ export default function Cadastros() {
                             }
                           }}
                         >
+                          <MapCenterUpdater cidade={form.cidade} uf={form.uf} />
                           {form.latitude && form.longitude && (
                             <AdvancedMarker position={{ lat: form.latitude, lng: form.longitude }} />
                           )}
@@ -380,6 +485,58 @@ export default function Cadastros() {
                   )}
                   {form.latitude && form.longitude && (
                     <p className="text-xs text-gray-500 mt-1">Lat: {form.latitude.toFixed(6)}, Lng: {form.longitude.toFixed(6)}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Botao Cadastrar Veiculo (quando tipo Motorista) */}
+              {mostraMotorista && editing && (
+                <div className="border border-indigo-200 bg-indigo-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-indigo-700"><CarFront className="w-4 h-4 inline mr-1" />Vincular Veiculo</span>
+                    <button type="button" onClick={() => { setVeiculoForm(emptyVeiculoForm); setShowVeiculoForm(!showVeiculoForm) }}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm flex items-center gap-1">
+                      <Plus className="w-3 h-3" /> Cadastrar Veiculo
+                    </button>
+                  </div>
+                  {showVeiculoForm && (
+                    <div className="mt-3 space-y-3 border-t border-indigo-200 pt-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Placa *</label>
+                          <input type="text" value={veiculoForm.placa} onChange={e => setVeiculoForm({...veiculoForm, placa: e.target.value.toUpperCase()})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Caminhao *</label>
+                          <select value={veiculoForm.tipo_caminhao} onChange={e => onVeiculoTipoChange(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            {TIPOS_CAMINHAO.map(t => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos - {t.peso_pauta_kg.toLocaleString('pt-BR')} kg)</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Marca</label>
+                          <input type="text" value={veiculoForm.marca} onChange={e => setVeiculoForm({...veiculoForm, marca: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Modelo</label>
+                          <input type="text" value={veiculoForm.modelo} onChange={e => setVeiculoForm({...veiculoForm, modelo: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Ano</label>
+                          <input type="number" value={veiculoForm.ano} onChange={e => setVeiculoForm({...veiculoForm, ano: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                        </div>
+                      </div>
+                      <button type="button" onClick={saveVeiculo}
+                        className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+                        Salvar Veiculo Vinculado
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

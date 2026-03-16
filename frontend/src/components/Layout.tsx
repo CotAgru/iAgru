@@ -1,9 +1,11 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront } from 'lucide-react'
+import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront, ClipboardList, FileText } from 'lucide-react'
 
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/ordens', label: 'Ordens de Carregamento', icon: ClipboardList },
+  { path: '/romaneios', label: 'Romaneios', icon: FileText },
   { path: '/cadastros', label: 'Cadastros', icon: Users },
   { path: '/veiculos', label: 'Veiculos', icon: CarFront },
   { path: '/produtos', label: 'Produtos', icon: Package },

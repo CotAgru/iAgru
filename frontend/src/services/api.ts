@@ -93,3 +93,51 @@ export const updatePreco = async (id: string, data: any) =>
 
 export const deletePreco = async (id: string) =>
   throwIfError(await supabase.from('precos_contratados').delete().eq('id', id))
+
+// === ORDENS DE CARREGAMENTO ===
+export const getOrdens = async () => {
+  const { data, error } = await supabase
+    .from('ordens_carregamento')
+    .select(`
+      *,
+      origem:cadastros!ordens_carregamento_origem_id_fkey(nome, nome_fantasia),
+      destino:cadastros!ordens_carregamento_destino_id_fkey(nome, nome_fantasia),
+      produtos(nome, tipo),
+      transportador:cadastros!ordens_carregamento_transportador_id_fkey(nome, nome_fantasia),
+      motorista:cadastros!ordens_carregamento_motorista_id_fkey(nome, nome_fantasia),
+      veiculos(placa, tipo_caminhao)
+    `)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((o: any) => ({
+    ...o,
+    origem_nome: o.origem?.nome_fantasia || o.origem?.nome,
+    destino_nome: o.destino?.nome_fantasia || o.destino?.nome,
+    produto_nome: o.produtos?.nome,
+    transportador_nome: o.transportador?.nome_fantasia || o.transportador?.nome,
+    motorista_nome: o.motorista?.nome_fantasia || o.motorista?.nome,
+    veiculo_placa: o.veiculos?.placa,
+  }))
+}
+
+export const createOrdem = async (data: any) =>
+  throwIfError(await supabase.from('ordens_carregamento').insert(data).select().single())
+
+export const updateOrdem = async (id: string, data: any) =>
+  throwIfError(await supabase.from('ordens_carregamento').update(data).eq('id', id).select().single())
+
+export const deleteOrdem = async (id: string) =>
+  throwIfError(await supabase.from('ordens_carregamento').delete().eq('id', id))
+
+// === ROMANEIOS ===
+export const getRomaneios = async () =>
+  throwIfError(await supabase.from('romaneios').select('*').order('created_at', { ascending: false }))
+
+export const createRomaneio = async (data: any) =>
+  throwIfError(await supabase.from('romaneios').insert(data).select().single())
+
+export const updateRomaneio = async (id: string, data: any) =>
+  throwIfError(await supabase.from('romaneios').update(data).eq('id', id).select().single())
+
+export const deleteRomaneio = async (id: string) =>
+  throwIfError(await supabase.from('romaneios').delete().eq('id', id))

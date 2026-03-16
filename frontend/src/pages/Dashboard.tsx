@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Users, CarFront, Package, DollarSign } from 'lucide-react'
-import { getCadastros, getVeiculos, getProdutos, getPrecos } from '../services/api'
+import { Users, CarFront, Package, DollarSign, ClipboardList, FileText } from 'lucide-react'
+import { getCadastros, getVeiculos, getProdutos, getPrecos, getOrdens, getRomaneios } from '../services/api'
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ cadastros: 0, veiculos: 0, produtos: 0, precos: 0 })
+  const [stats, setStats] = useState({ cadastros: 0, veiculos: 0, produtos: 0, precos: 0, ordens: 0, romaneios: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -12,18 +12,24 @@ export default function Dashboard() {
       getVeiculos().catch(() => []),
       getProdutos().catch(() => []),
       getPrecos().catch(() => []),
-    ]).then(([c, v, p, pr]) => {
+      getOrdens().catch(() => []),
+      getRomaneios().catch(() => []),
+    ]).then(([c, v, p, pr, o, r]) => {
       setStats({
         cadastros: c.length,
         veiculos: v.length,
         produtos: p.length,
         precos: pr.length,
+        ordens: o.length,
+        romaneios: r.length,
       })
       setLoading(false)
     })
   }, [])
 
   const cards = [
+    { label: 'Ordens', value: stats.ordens, icon: ClipboardList, color: 'bg-orange-500' },
+    { label: 'Romaneios', value: stats.romaneios, icon: FileText, color: 'bg-teal-500' },
     { label: 'Cadastros', value: stats.cadastros, icon: Users, color: 'bg-blue-500' },
     { label: 'Veiculos', value: stats.veiculos, icon: CarFront, color: 'bg-purple-500' },
     { label: 'Produtos', value: stats.produtos, icon: Package, color: 'bg-emerald-500' },
@@ -37,7 +43,7 @@ export default function Dashboard() {
       {loading ? (
         <p className="text-gray-500">Carregando...</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {cards.map((card) => {
             const Icon = card.icon
             return (

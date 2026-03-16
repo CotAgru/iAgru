@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const UNIDADES_PRECO = ['R$/ton', 'R$/sc', 'R$/km', 'R$/viagem']
 const TIPOS_ORIGEM_DESTINO = ['Fazenda', 'Armazem', 'Industria', 'Porto', 'Fornecedor']
 const TIPOS_TRANSPORTADOR = ['Transportadora', 'Motorista']
@@ -10,6 +11,7 @@ const emptyForm = { origem_id: '', destino_id: '', produto_id: '', fornecedor_id
 
 export default function Precos() {
   const [items, setItems] = useState<any[]>([])
+  const [allCadastros, setAllCadastros] = useState<any[]>([])
   const [origemDestino, setOrigemDestino] = useState<any[]>([])
   const [transportadores, setTransportadores] = useState<any[]>([])
   const [produtos, setProdutos] = useState<any[]>([])
@@ -17,12 +19,14 @@ export default function Precos() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(emptyForm)
+  const [calcDist, setCalcDist] = useState(false)
 
   const load = () => {
     setLoading(true)
     Promise.all([getPrecos(), getCadastros(), getProdutos()])
       .then(([p, c, pr]) => {
         setItems(p)
+        setAllCadastros(c)
         setOrigemDestino(c.filter((x: any) => (x.tipos || []).some((t: string) => TIPOS_ORIGEM_DESTINO.includes(t))))
         setTransportadores(c.filter((x: any) => (x.tipos || []).some((t: string) => TIPOS_TRANSPORTADOR.includes(t))))
         setProdutos(pr)
@@ -31,6 +35,39 @@ export default function Precos() {
       .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+
+  // Calcular distancia automatica via Directions API
+  const calcularDistancia = async (origemId: string, destinoId: string) => {
+    if (!origemId || !destinoId || !GOOGLE_MAPS_API_KEY) return
+    const origem = allCadastros.find((c: any) => c.id === origemId)
+    const destino = allCadastros.find((c: any) => c.id === destinoId)
+    if (!origem || !destino) return
+    const origemStr = origem.latitude && origem.longitude
+      ? `${origem.latitude},${origem.longitude}`
+      : `${origem.cidade}, ${origem.uf}, Brasil`
+    const destinoStr = destino.latitude && destino.longitude
+      ? `${destino.latitude},${destino.longitude}`
+      : `${destino.cidade}, ${destino.uf}, Brasil`
+    setCalcDist(true)
+    try {
+      const resp = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origemStr)}&destination=${encodeURIComponent(destinoStr)}&key=${GOOGLE_MAPS_API_KEY}`)
+      const data = await resp.json()
+      if (data.routes?.[0]?.legs?.[0]?.distance) {
+        const km = Math.round(data.routes[0].legs[0].distance.value / 1000)
+        setForm(prev => ({ ...prev, distancia_km: km.toString() }))
+      }
+    } catch { /* silencioso */ }
+    finally { setCalcDist(false) }
+  }
+
+  const onOrigemChange = (id: string) => {
+    setForm(prev => ({ ...prev, origem_id: id }))
+    if (id && form.destino_id) calcularDistancia(id, form.destino_id)
+  }
+  const onDestinoChange = (id: string) => {
+    setForm(prev => ({ ...prev, destino_id: id }))
+    if (form.origem_id && id) calcularDistancia(form.origem_id, id)
+  }
 
   const openNew = () => { setEditing(null); setForm(emptyForm); setShowForm(true) }
   const openEdit = (item: any) => {
@@ -41,12 +78,24 @@ export default function Precos() {
 
   const save = async () => {
     if (!form.origem_id || !form.destino_id || !form.produto_id || !form.valor) { toast.error('Origem, destino, produto e valor sao obrigatorios'); return }
-    const data = { ...form, valor: Number(form.valor), distancia_km: form.distancia_km ? Number(form.distancia_km) : null, fornecedor_id: form.fornecedor_id || null }
+    const payload: any = {
+      origem_id: form.origem_id,
+      destino_id: form.destino_id,
+      produto_id: form.produto_id,
+      fornecedor_id: form.fornecedor_id || null,
+      valor: Number(form.valor),
+      unidade_preco: form.unidade_preco,
+      distancia_km: form.distancia_km ? Number(form.distancia_km) : null,
+      observacoes: form.observacoes || null,
+      ativo: form.ativo,
+    }
+    if (form.vigencia_inicio) payload.vigencia_inicio = form.vigencia_inicio
+    if (form.vigencia_fim) payload.vigencia_fim = form.vigencia_fim
     try {
-      if (editing) { await updatePreco(editing.id, data); toast.success('Preco atualizado') }
-      else { await createPreco(data); toast.success('Preco cadastrado') }
+      if (editing) { await updatePreco(editing.id, payload); toast.success('Preco atualizado') }
+      else { await createPreco(payload); toast.success('Preco cadastrado') }
       setShowForm(false); load()
-    } catch { toast.error('Erro ao salvar') }
+    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')); console.error(err) }
   }
 
   const remove = async (id: string) => {
@@ -106,14 +155,14 @@ export default function Precos() {
             <div className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
-                <select value={form.origem_id} onChange={e => setForm({...form, origem_id: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <select value={form.origem_id} onChange={e => onOrigemChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                   <option value="">Selecione...</option>
                   {origemDestino.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome} ({(l.tipos||[]).join(', ')})</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
-                <select value={form.destino_id} onChange={e => setForm({...form, destino_id: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <select value={form.destino_id} onChange={e => onDestinoChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                   <option value="">Selecione...</option>
                   {origemDestino.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome} ({(l.tipos||[]).join(', ')})</option>)}
                 </select>
@@ -144,7 +193,7 @@ export default function Precos() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dist. (km)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dist. (km) {calcDist && <Loader2 className="w-3 h-3 inline animate-spin" />}</label>
                   <input type="number" value={form.distancia_km} onChange={e => setForm({...form, distancia_km: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
               </div>
