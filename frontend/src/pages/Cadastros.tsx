@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo } from '../services/api'
+import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -50,6 +50,16 @@ const emptyForm = {
 }
 
 const emptyVeiculoForm = { placa: '', tipo_caminhao: 'Carreta', eixos: 6, peso_pauta_kg: 37000, marca: '', modelo: '', ano: '' }
+
+// Formatar telefone: (xx) xxxxx-xxxx ou (xx) xxxx-xxxx
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length === 0) return ''
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0,2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`
+  return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`
+}
 
 // Componente para centralizar o mapa na cidade
 function MapCenterUpdater({ cidade, uf }: { cidade: string; uf: string }) {
@@ -105,10 +115,16 @@ export default function Cadastros() {
   const [showVeiculoForm, setShowVeiculoForm] = useState(false)
   const [veiculoForm, setVeiculoForm] = useState(emptyVeiculoForm)
   const [savedMotoristaId, setSavedMotoristaId] = useState<string | null>(null)
+  const [allVeiculos, setAllVeiculos] = useState<any[]>([])
+  const [filtroUf, setFiltroUf] = useState('')
+  const [filtroCidade, setFiltroCidade] = useState('')
 
   const load = () => {
     setLoading(true)
-    getCadastros().then(setItems).catch(() => toast.error('Erro ao carregar')).finally(() => setLoading(false))
+    Promise.all([getCadastros(), getVeiculos()])
+      .then(([c, v]) => { setItems(c); setAllVeiculos(v) })
+      .catch(() => toast.error('Erro ao carregar'))
+      .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
 
@@ -192,6 +208,20 @@ export default function Cadastros() {
     ? items.filter(i => (i.tipos || []).includes('Motorista') && i.transportador_id === editing.id)
     : []
 
+  // Veiculos do motorista atual
+  const veiculosDoMotorista = (savedMotoristaId || editing?.id)
+    ? allVeiculos.filter((v: any) => v.cadastro_id === (savedMotoristaId || editing?.id))
+    : []
+
+  // Veiculos dos motoristas vinculados a transportadora
+  const veiculosTransportadora = motoristasVinculados.flatMap(m =>
+    allVeiculos.filter((v: any) => v.cadastro_id === m.id).map(v => ({ ...v, motorista_nome: m.nome_fantasia || m.nome }))
+  )
+
+  // Placas por cadastro_id (para coluna na tabela)
+  const placasPorCadastro = (cadastroId: string) =>
+    allVeiculos.filter((v: any) => v.cadastro_id === cadastroId).map((v: any) => v.placa)
+
   const openNew = () => { setEditing(null); setForm(emptyForm); setSavedMotoristaId(null); setShowForm(true) }
   const openEdit = (item: Cadastro) => {
     setEditing(item)
@@ -259,8 +289,10 @@ export default function Cadastros() {
         ativo: true,
       })
       toast.success('Veiculo cadastrado e vinculado!')
-      setShowVeiculoForm(false)
       setVeiculoForm(emptyVeiculoForm)
+      // Recarregar veiculos para mostrar na lista
+      const v = await getVeiculos()
+      setAllVeiculos(v)
     } catch { toast.error('Erro ao cadastrar veiculo') }
   }
 
@@ -272,11 +304,18 @@ export default function Cadastros() {
 
   const filtered = items.filter(i => {
     if (filtroTipo && !(i.tipos || []).includes(filtroTipo)) return false
+    if (filtroUf && i.uf !== filtroUf) return false
+    if (filtroCidade && i.cidade !== filtroCidade) return false
     if (!busca) return true
     const term = busca.toLowerCase()
     return i.nome?.toLowerCase().includes(term) || i.nome_fantasia?.toLowerCase().includes(term) ||
-      i.cpf_cnpj?.toLowerCase().includes(term) || i.cidade?.toLowerCase().includes(term)
+      i.cpf_cnpj?.toLowerCase().includes(term) || i.cidade?.toLowerCase().includes(term) ||
+      placasPorCadastro(i.id).some(p => p.toLowerCase().includes(term))
   })
+
+  // UFs e cidades disponíveis nos dados para filtro
+  const ufsDisponiveis = [...new Set(items.map(i => i.uf))].sort()
+  const cidadesDisponiveis = filtroUf ? [...new Set(items.filter(i => i.uf === filtroUf).map(i => i.cidade))].sort() : []
 
   const tipoColors: Record<string, string> = {
     Fazenda: 'bg-green-100 text-green-700', Armazem: 'bg-blue-100 text-blue-700',
@@ -298,24 +337,37 @@ export default function Cadastros() {
       <div className="mb-4 flex gap-2 sm:gap-3 flex-wrap">
         <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-          <input type="text" placeholder="Buscar por nome, CNPJ ou cidade..." value={busca} onChange={e => setBusca(e.target.value)}
+          <input type="text" placeholder="Buscar nome, CNPJ, cidade, placa..." value={busca} onChange={e => setBusca(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
         </div>
         <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
           <option value="">Todos os tipos</option>
           {TODOS_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
+        <select value={filtroUf} onChange={e => { setFiltroUf(e.target.value); setFiltroCidade('') }}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+          <option value="">Todas UFs</option>
+          {ufsDisponiveis.map(u => <option key={u} value={u}>{u}</option>)}
+        </select>
+        {filtroUf && cidadesDisponiveis.length > 0 && (
+          <select value={filtroCidade} onChange={e => setFiltroCidade(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+            <option value="">Todas cidades</option>
+            {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Tabela */}
       {loading ? <p className="text-gray-500">Carregando...</p> : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Nome</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">CPF/CNPJ</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Placa</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Cidade/UF</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Tipos</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Telefone</th>
@@ -323,13 +375,20 @@ export default function Cadastros() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filtered.map(item => (
+              {filtered.map(item => {
+                const placas = placasPorCadastro(item.id)
+                return (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="font-medium">{item.nome_fantasia || item.nome}</div>
                     {item.nome_fantasia && <div className="text-xs text-gray-400">{item.nome}</div>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 font-mono text-xs">{item.cpf_cnpj || '-'}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {placas.length > 0 ? placas.map(p => (
+                      <span key={p} className="inline-block bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded mr-1 mb-0.5">{p}</span>
+                    )) : <span className="text-gray-300">-</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{item.cidade}/{item.uf}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -344,8 +403,9 @@ export default function Cadastros() {
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
-              ))}
-              {filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhum cadastro encontrado</td></tr>}
+                )
+              })}
+              {filtered.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum cadastro encontrado</td></tr>}
             </tbody>
           </table>
         </div>
@@ -397,14 +457,14 @@ export default function Cadastros() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefone 1</label>
-                  <input type="text" value={form.telefone1} onChange={e => setForm({...form, telefone1: e.target.value})}
-                    placeholder="(00)00000-0000"
+                  <input type="text" value={form.telefone1} onChange={e => setForm({...form, telefone1: formatPhone(e.target.value)})}
+                    placeholder="(00) 00000-0000"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefone 2</label>
-                  <input type="text" value={form.telefone2} onChange={e => setForm({...form, telefone2: e.target.value})}
-                    placeholder="(00)00000-0000"
+                  <input type="text" value={form.telefone2} onChange={e => setForm({...form, telefone2: formatPhone(e.target.value)})}
+                    placeholder="(00) 00000-0000"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
               </div>
@@ -510,37 +570,68 @@ export default function Cadastros() {
                 </div>
               )}
 
-              {/* Motoristas vinculados (quando tipo Transportadora) */}
+              {/* Motoristas e Veiculos vinculados (quando tipo Transportadora) */}
               {mostraTransportadora && editing && (
                 <div className="border border-rose-200 bg-rose-50 rounded-lg p-3">
-                  <span className="text-sm font-medium text-rose-700">Motoristas vinculados a esta Transportadora</span>
+                  <span className="text-sm font-medium text-rose-700">Motoristas e Veiculos vinculados a esta Transportadora</span>
                   {motoristasVinculados.length > 0 ? (
-                    <ul className="mt-2 space-y-1">
-                      {motoristasVinculados.map(m => (
-                        <li key={m.id} className="text-sm text-gray-700 flex items-center gap-2">
-                          <span className="w-2 h-2 bg-rose-400 rounded-full" />
-                          {m.nome_fantasia || m.nome}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-2 space-y-2">
+                      {motoristasVinculados.map(m => {
+                        const veicsMot = allVeiculos.filter((v: any) => v.cadastro_id === m.id)
+                        return (
+                          <div key={m.id} className="bg-white rounded-lg px-3 py-2 border border-rose-100">
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="w-2 h-2 bg-rose-400 rounded-full" />
+                              <span className="font-medium text-gray-700">{m.nome_fantasia || m.nome}</span>
+                            </div>
+                            {veicsMot.length > 0 && (
+                              <div className="ml-4 mt-1 flex flex-wrap gap-1">
+                                {veicsMot.map((v: any) => (
+                                  <span key={v.id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-mono">
+                                    <CarFront className="w-3 h-3" />{v.placa} <span className="text-gray-400 font-sans">({v.tipo_caminhao})</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   ) : (
                     <p className="text-xs text-gray-500 mt-1">Nenhum motorista vinculado. Vincule motoristas editando o cadastro deles e selecionando esta transportadora.</p>
                   )}
                 </div>
               )}
 
-              {/* Botao Cadastrar Veiculo (quando tipo Motorista) */}
+              {/* Veiculos do Motorista (quando tipo Motorista e editando) */}
               {mostraMotorista && editing && (
                 <div className="border border-indigo-200 bg-indigo-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-indigo-700"><CarFront className="w-4 h-4 inline mr-1" />Vincular Veiculo</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-indigo-700"><CarFront className="w-4 h-4 inline mr-1" />Veiculos do Motorista</span>
                     <button type="button" onClick={() => { setVeiculoForm(emptyVeiculoForm); setShowVeiculoForm(!showVeiculoForm) }}
                       className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm flex items-center gap-1">
                       <Plus className="w-3 h-3" /> Cadastrar Veiculo
                     </button>
                   </div>
+
+                  {/* Lista de veiculos ja cadastrados */}
+                  {veiculosDoMotorista.length > 0 && (
+                    <div className="space-y-1 mb-3">
+                      {veiculosDoMotorista.map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-3 bg-white rounded px-3 py-2 border border-indigo-100 text-sm">
+                          <span className="font-mono font-semibold text-indigo-800">{v.placa}</span>
+                          <span className="text-gray-500">{v.tipo_caminhao}</span>
+                          {v.marca && <span className="text-gray-400 text-xs">{v.marca} {v.modelo || ''}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {veiculosDoMotorista.length === 0 && !showVeiculoForm && (
+                    <p className="text-xs text-gray-500 mb-2">Nenhum veiculo cadastrado para este motorista.</p>
+                  )}
+
                   {showVeiculoForm && (
-                    <div className="mt-3 space-y-3 border-t border-indigo-200 pt-3">
+                    <div className="mt-2 space-y-3 border-t border-indigo-200 pt-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Placa *</label>

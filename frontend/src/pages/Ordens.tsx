@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Truck, User, Minus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getOrdens, createOrdem, updateOrdem, deleteOrdem, getCadastros, getProdutos, getVeiculos, getPrecos, getOrdemTransportadores, addOrdemTransportador, removeOrdemTransportador } from '../services/api'
+import { getOrdens, createOrdem, updateOrdem, deleteOrdem, getCadastros, getProdutos, getVeiculos, getPrecos, getOrdemTransportadores, addOrdemTransportador, removeOrdemTransportador, createCadastro, createProduto } from '../services/api'
 
 const STATUS_OPTIONS = [
   { value: 'pendente', label: 'Pendente', color: 'bg-yellow-100 text-yellow-700' },
@@ -35,6 +35,17 @@ export default function Ordens() {
   const [addTranspId, setAddTranspId] = useState('')
   const [addMotoristaId, setAddMotoristaId] = useState('')
 
+  // Mini-forms inline para "+ Novo"
+  const [showNewOrigem, setShowNewOrigem] = useState(false)
+  const [showNewDestino, setShowNewDestino] = useState(false)
+  const [showNewProduto, setShowNewProduto] = useState(false)
+  const [newCadNome, setNewCadNome] = useState('')
+  const [newCadUf, setNewCadUf] = useState('GO')
+  const [newCadCidade, setNewCadCidade] = useState('')
+  const [newCadTipo, setNewCadTipo] = useState('Fazenda')
+  const [newProdNome, setNewProdNome] = useState('')
+  const [newProdTipo, setNewProdTipo] = useState('Grao')
+
   const load = () => {
     setLoading(true)
     Promise.all([getOrdens(), getCadastros(), getProdutos(), getVeiculos(), getPrecos()])
@@ -52,6 +63,41 @@ export default function Ordens() {
       .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+
+  // Precos filtrados por origem×destino
+  const precosFiltrados = (form.origem_id && form.destino_id)
+    ? precos.filter((p: any) => p.origem_id === form.origem_id && p.destino_id === form.destino_id)
+    : precos
+
+  // Criar novo cadastro inline
+  const criarCadastroInline = async (target: 'origem' | 'destino') => {
+    if (!newCadNome.trim() || !newCadCidade.trim()) { toast.error('Nome e cidade sao obrigatorios'); return }
+    try {
+      const result = await createCadastro({ nome: newCadNome, uf: newCadUf, cidade: newCadCidade, tipos: [newCadTipo], ativo: true })
+      toast.success('Cadastro criado!')
+      // Recarregar dados
+      const c = await getCadastros()
+      setAllCadastros(c)
+      setOrigens(c.filter((x: any) => (x.tipos || []).some((t: string) => TIPOS_ORIGEM.includes(t))))
+      setTransportadoras(c.filter((x: any) => (x.tipos || []).includes('Transportadora')))
+      setAllMotoristas(c.filter((x: any) => (x.tipos || []).includes('Motorista')))
+      setForm(prev => ({ ...prev, [target === 'origem' ? 'origem_id' : 'destino_id']: result.id }))
+      setShowNewOrigem(false); setShowNewDestino(false)
+      setNewCadNome(''); setNewCadCidade('')
+    } catch { toast.error('Erro ao criar cadastro') }
+  }
+
+  const criarProdutoInline = async () => {
+    if (!newProdNome.trim()) { toast.error('Nome do produto e obrigatorio'); return }
+    try {
+      const result = await createProduto({ nome: newProdNome, tipo: newProdTipo, unidade_medida: 'ton', ativo: true })
+      toast.success('Produto criado!')
+      const p = await getProdutos()
+      setProdutos(p)
+      setForm(prev => ({ ...prev, produto_id: result.id }))
+      setShowNewProduto(false); setNewProdNome('')
+    } catch { toast.error('Erro ao criar produto') }
+  }
 
   const loadOrdemTransps = async (ordemId: string) => {
     try {
@@ -247,19 +293,57 @@ export default function Ordens() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
-                  <select value={form.origem_id} onChange={e => setForm({...form, origem_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <select value={form.origem_id} onChange={e => {
+                    if (e.target.value === '__novo__') { setShowNewOrigem(true); return }
+                    setForm({...form, origem_id: e.target.value, preco_id: ''})
+                  }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     <option value="">Selecione...</option>
                     {origens.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome}</option>)}
+                    <option value="__novo__">+ Novo cadastro...</option>
                   </select>
+                  {showNewOrigem && (
+                    <div className="mt-2 p-3 border border-green-300 bg-green-50 rounded-lg space-y-2">
+                      <input type="text" placeholder="Nome *" value={newCadNome} onChange={e => setNewCadNome(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="UF" value={newCadUf} onChange={e => setNewCadUf(e.target.value)} className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                        <input type="text" placeholder="Cidade *" value={newCadCidade} onChange={e => setNewCadCidade(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                        <select value={newCadTipo} onChange={e => setNewCadTipo(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-sm">
+                          {TIPOS_ORIGEM.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => criarCadastroInline('origem')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">Salvar</button>
+                        <button type="button" onClick={() => setShowNewOrigem(false)} className="px-3 py-1.5 text-gray-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
-                  <select value={form.destino_id} onChange={e => setForm({...form, destino_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <select value={form.destino_id} onChange={e => {
+                    if (e.target.value === '__novo__') { setShowNewDestino(true); return }
+                    setForm({...form, destino_id: e.target.value, preco_id: ''})
+                  }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     <option value="">Selecione...</option>
                     {origens.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome}</option>)}
+                    <option value="__novo__">+ Novo cadastro...</option>
                   </select>
+                  {showNewDestino && (
+                    <div className="mt-2 p-3 border border-green-300 bg-green-50 rounded-lg space-y-2">
+                      <input type="text" placeholder="Nome *" value={newCadNome} onChange={e => setNewCadNome(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="UF" value={newCadUf} onChange={e => setNewCadUf(e.target.value)} className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                        <input type="text" placeholder="Cidade *" value={newCadCidade} onChange={e => setNewCadCidade(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                        <select value={newCadTipo} onChange={e => setNewCadTipo(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-sm">
+                          {TIPOS_ORIGEM.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => criarCadastroInline('destino')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">Salvar</button>
+                        <button type="button" onClick={() => setShowNewDestino(false)} className="px-3 py-1.5 text-gray-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -267,11 +351,26 @@ export default function Ordens() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
-                  <select value={form.produto_id} onChange={e => setForm({...form, produto_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <select value={form.produto_id} onChange={e => {
+                    if (e.target.value === '__novo__') { setShowNewProduto(true); return }
+                    setForm({...form, produto_id: e.target.value})
+                  }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     <option value="">Selecione...</option>
                     {produtos.map((p: any) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    <option value="__novo__">+ Novo produto...</option>
                   </select>
+                  {showNewProduto && (
+                    <div className="mt-2 p-3 border border-green-300 bg-green-50 rounded-lg space-y-2">
+                      <input type="text" placeholder="Nome do produto *" value={newProdNome} onChange={e => setNewProdNome(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <div className="flex gap-2">
+                        <select value={newProdTipo} onChange={e => setNewProdTipo(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded text-sm">
+                          <option value="Grao">Grao</option><option value="Insumo">Insumo</option>
+                        </select>
+                        <button type="button" onClick={criarProdutoInline} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">Salvar</button>
+                        <button type="button" onClick={() => setShowNewProduto(false)} className="px-3 py-1.5 text-gray-600 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Qtd Prevista</label>
@@ -287,14 +386,19 @@ export default function Ordens() {
                 </div>
               </div>
 
-              {/* Preco Vinculado */}
+              {/* Preco Vinculado - filtrado por origem×destino */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Preco Contratado (vinculo)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preco Contratado (vinculo)
+                  {form.origem_id && form.destino_id && <span className="text-xs text-green-600 ml-1">filtrado pela rota</span>}
+                </label>
                 <select value={form.preco_id} onChange={e => setForm({...form, preco_id: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                   <option value="">Nenhum</option>
-                  {precos.map((p: any) => <option key={p.id} value={p.id}>{p.origem_nome} → {p.destino_nome} | {p.produto_nome} | {p.valor} {p.unidade_preco}</option>)}
+                  {precosFiltrados.map((p: any) => <option key={p.id} value={p.id}>{p.origem_nome} → {p.destino_nome} | {p.produto_nome} | {p.valor} {p.unidade_preco}</option>)}
                 </select>
+                {form.origem_id && form.destino_id && precosFiltrados.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">Nenhum preco cadastrado para esta rota.</p>
+                )}
               </div>
 
               {/* Observacoes */}
@@ -325,8 +429,8 @@ export default function Ordens() {
                       <option value="">Selecionar Transportadora...</option>
                       {transportadoras.map((t: any) => <option key={t.id} value={t.id}>{t.nome_fantasia || t.nome}</option>)}
                     </select>
-                    <button onClick={handleAddTransportadora} disabled={!addTranspId}
-                      className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 text-sm whitespace-nowrap">
+                    <button type="button" onClick={() => { if (addTranspId) handleAddTransportadora(); else toast.error('Selecione uma transportadora') }}
+                      className="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm whitespace-nowrap cursor-pointer">
                       <Truck className="w-4 h-4" /> + Transportadora
                     </button>
                   </div>
@@ -338,8 +442,8 @@ export default function Ordens() {
                       <option value="">Selecionar Motorista...</option>
                       {allMotoristas.map((m: any) => <option key={m.id} value={m.id}>{m.nome_fantasia || m.nome}</option>)}
                     </select>
-                    <button onClick={handleAddMotorista} disabled={!addMotoristaId}
-                      className="flex items-center gap-1 px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 text-sm whitespace-nowrap">
+                    <button type="button" onClick={() => { if (addMotoristaId) handleAddMotorista(); else toast.error('Selecione um motorista') }}
+                      className="flex items-center gap-1 px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 text-sm whitespace-nowrap cursor-pointer">
                       <User className="w-4 h-4" /> + Motorista
                     </button>
                   </div>
