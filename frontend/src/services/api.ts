@@ -1,85 +1,111 @@
-import axios from 'axios';
+import { supabase } from '../lib/supabase'
 
-const api = axios.create({
-  baseURL: '/api',
-});
+function throwIfError({ data, error }: any) {
+  if (error) throw error
+  return data
+}
 
 // === FORNECEDORES ===
-export const getFornecedores = (params?: Record<string, string>) =>
-  api.get('/fornecedores', { params }).then(r => r.data);
+export const getFornecedores = async () =>
+  throwIfError(await supabase.from('fornecedores').select('*').order('nome'))
 
-export const getFornecedor = (id: string) =>
-  api.get(`/fornecedores/${id}`).then(r => r.data);
+export const getFornecedor = async (id: string) =>
+  throwIfError(await supabase.from('fornecedores').select('*').eq('id', id).single())
 
-export const createFornecedor = (data: any) =>
-  api.post('/fornecedores', data).then(r => r.data);
+export const createFornecedor = async (data: any) =>
+  throwIfError(await supabase.from('fornecedores').insert(data).select().single())
 
-export const updateFornecedor = (id: string, data: any) =>
-  api.put(`/fornecedores/${id}`, data).then(r => r.data);
+export const updateFornecedor = async (id: string, data: any) =>
+  throwIfError(await supabase.from('fornecedores').update(data).eq('id', id).select().single())
 
-export const deleteFornecedor = (id: string) =>
-  api.delete(`/fornecedores/${id}`).then(r => r.data);
+export const deleteFornecedor = async (id: string) =>
+  throwIfError(await supabase.from('fornecedores').delete().eq('id', id))
 
 // === VEICULOS ===
-export const getVeiculos = (params?: Record<string, string>) =>
-  api.get('/veiculos', { params }).then(r => r.data);
+export const getVeiculos = async () => {
+  const { data, error } = await supabase
+    .from('veiculos')
+    .select('*, fornecedores(nome)')
+    .order('placa')
+  if (error) throw error
+  return data.map((v: any) => ({ ...v, fornecedor_nome: v.fornecedores?.nome }))
+}
 
-export const getVeiculo = (id: string) =>
-  api.get(`/veiculos/${id}`).then(r => r.data);
+export const getVeiculo = async (id: string) =>
+  throwIfError(await supabase.from('veiculos').select('*').eq('id', id).single())
 
-export const createVeiculo = (data: any) =>
-  api.post('/veiculos', data).then(r => r.data);
+export const createVeiculo = async (data: any) =>
+  throwIfError(await supabase.from('veiculos').insert(data).select().single())
 
-export const updateVeiculo = (id: string, data: any) =>
-  api.put(`/veiculos/${id}`, data).then(r => r.data);
+export const updateVeiculo = async (id: string, data: any) =>
+  throwIfError(await supabase.from('veiculos').update(data).eq('id', id).select().single())
 
-export const deleteVeiculo = (id: string) =>
-  api.delete(`/veiculos/${id}`).then(r => r.data);
+export const deleteVeiculo = async (id: string) =>
+  throwIfError(await supabase.from('veiculos').delete().eq('id', id))
 
 // === LOCAIS ===
-export const getLocais = (params?: Record<string, string>) =>
-  api.get('/locais', { params }).then(r => r.data);
+export const getLocais = async () =>
+  throwIfError(await supabase.from('locais').select('*').order('nome'))
 
-export const getLocal = (id: string) =>
-  api.get(`/locais/${id}`).then(r => r.data);
+export const getLocal = async (id: string) =>
+  throwIfError(await supabase.from('locais').select('*').eq('id', id).single())
 
-export const createLocal = (data: any) =>
-  api.post('/locais', data).then(r => r.data);
+export const createLocal = async (data: any) =>
+  throwIfError(await supabase.from('locais').insert(data).select().single())
 
-export const updateLocal = (id: string, data: any) =>
-  api.put(`/locais/${id}`, data).then(r => r.data);
+export const updateLocal = async (id: string, data: any) =>
+  throwIfError(await supabase.from('locais').update(data).eq('id', id).select().single())
 
-export const deleteLocal = (id: string) =>
-  api.delete(`/locais/${id}`).then(r => r.data);
+export const deleteLocal = async (id: string) =>
+  throwIfError(await supabase.from('locais').delete().eq('id', id))
 
 // === PRODUTOS ===
-export const getProdutos = (params?: Record<string, string>) =>
-  api.get('/produtos', { params }).then(r => r.data);
+export const getProdutos = async () =>
+  throwIfError(await supabase.from('produtos').select('*').order('nome'))
 
-export const getProduto = (id: string) =>
-  api.get(`/produtos/${id}`).then(r => r.data);
+export const getProduto = async (id: string) =>
+  throwIfError(await supabase.from('produtos').select('*').eq('id', id).single())
 
-export const createProduto = (data: any) =>
-  api.post('/produtos', data).then(r => r.data);
+export const createProduto = async (data: any) =>
+  throwIfError(await supabase.from('produtos').insert(data).select().single())
 
-export const updateProduto = (id: string, data: any) =>
-  api.put(`/produtos/${id}`, data).then(r => r.data);
+export const updateProduto = async (id: string, data: any) =>
+  throwIfError(await supabase.from('produtos').update(data).eq('id', id).select().single())
 
-export const deleteProduto = (id: string) =>
-  api.delete(`/produtos/${id}`).then(r => r.data);
+export const deleteProduto = async (id: string) =>
+  throwIfError(await supabase.from('produtos').delete().eq('id', id))
 
 // === PRECOS CONTRATADOS ===
-export const getPrecos = (params?: Record<string, string>) =>
-  api.get('/precos', { params }).then(r => r.data);
+export const getPrecos = async () => {
+  const { data, error } = await supabase
+    .from('precos_contratados')
+    .select(`
+      *,
+      origem:locais!precos_contratados_origem_id_fkey(nome),
+      destino:locais!precos_contratados_destino_id_fkey(nome),
+      produtos(nome, tipo),
+      fornecedores(nome)
+    `)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((p: any) => ({
+    ...p,
+    origem_nome: p.origem?.nome,
+    destino_nome: p.destino?.nome,
+    produto_nome: p.produtos?.nome,
+    produto_tipo: p.produtos?.tipo,
+    fornecedor_nome: p.fornecedores?.nome,
+  }))
+}
 
-export const getPreco = (id: string) =>
-  api.get(`/precos/${id}`).then(r => r.data);
+export const getPreco = async (id: string) =>
+  throwIfError(await supabase.from('precos_contratados').select('*').eq('id', id).single())
 
-export const createPreco = (data: any) =>
-  api.post('/precos', data).then(r => r.data);
+export const createPreco = async (data: any) =>
+  throwIfError(await supabase.from('precos_contratados').insert(data).select().single())
 
-export const updatePreco = (id: string, data: any) =>
-  api.put(`/precos/${id}`, data).then(r => r.data);
+export const updatePreco = async (id: string, data: any) =>
+  throwIfError(await supabase.from('precos_contratados').update(data).eq('id', id).select().single())
 
-export const deletePreco = (id: string) =>
-  api.delete(`/precos/${id}`).then(r => r.data);
+export const deletePreco = async (id: string) =>
+  throwIfError(await supabase.from('precos_contratados').delete().eq('id', id))
