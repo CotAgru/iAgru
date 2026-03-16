@@ -143,7 +143,38 @@ export default function Precos() {
   const gerarDocumento = (item: any) => {
     const origem = allCadastros.find((c: any) => c.id === item.origem_id)
     const destino = allCadastros.find((c: any) => c.id === item.destino_id)
-    const fornecedor = item.fornecedor_id ? allCadastros.find((c: any) => c.id === item.fornecedor_id) : null
+
+    // Mapa estatico com trajeto
+    let mapaHtml = ''
+    if (GOOGLE_MAPS_API_KEY) {
+      const origemMarker = origem?.latitude && origem?.longitude
+        ? `${origem.latitude},${origem.longitude}`
+        : `${origem?.cidade || ''},${origem?.uf || ''},Brasil`
+      const destinoMarker = destino?.latitude && destino?.longitude
+        ? `${destino.latitude},${destino.longitude}`
+        : `${destino?.cidade || ''},${destino?.uf || ''},Brasil`
+      const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=760x300&maptype=roadmap`
+        + `&markers=color:green%7Clabel:A%7C${encodeURIComponent(origemMarker)}`
+        + `&markers=color:red%7Clabel:B%7C${encodeURIComponent(destinoMarker)}`
+        + `&path=enc:&sensor=false`
+        + `&key=${GOOGLE_MAPS_API_KEY}`
+      const dirMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=760x300&maptype=roadmap`
+        + `&markers=color:0x16a34a%7Clabel:A%7C${encodeURIComponent(origemMarker)}`
+        + `&markers=color:0xdc2626%7Clabel:B%7C${encodeURIComponent(destinoMarker)}`
+        + `&path=color:0x2563eb%7Cweight:4%7C${encodeURIComponent(origemMarker)}%7C${encodeURIComponent(destinoMarker)}`
+        + `&key=${GOOGLE_MAPS_API_KEY}`
+      mapaHtml = `
+      <div class="section">
+        <h2>Mapa do Trajeto</h2>
+        <div style="text-align:center;border-radius:10px;overflow:hidden;border:1px solid #ddd">
+          <img src="${dirMapUrl}" alt="Mapa do trajeto" style="width:100%;max-width:760px;display:block;margin:0 auto" />
+        </div>
+        <div style="display:flex;justify-content:center;gap:20px;margin-top:8px;font-size:12px;color:#666">
+          <span><span style="color:#16a34a;font-weight:bold">A</span> = Origem</span>
+          <span><span style="color:#dc2626;font-weight:bold">B</span> = Destino</span>
+        </div>
+      </div>`
+    }
 
     const html = `
 <!DOCTYPE html>
@@ -181,6 +212,7 @@ export default function Precos() {
     </div>
     ${item.distancia_km ? `<div class="rota" style="margin-top:10px"><div class="distancia">${item.distancia_km} km</div><div style="color:#666;font-size:12px">Distancia estimada via rota rodoviaria</div></div>` : ''}
   </div>
+  ${mapaHtml}
   <div class="section">
     <h2>Produto e Transportador</h2>
     <div class="grid">
@@ -206,22 +238,22 @@ export default function Precos() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Precos Contratados</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"><Plus className="w-4 h-4" /> Novo Preco</button>
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Precos Contratados</h1>
+        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Preco</button>
       </div>
       {loading ? <p className="text-gray-500">Carregando...</p> : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-sm min-w-[650px]">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Origem</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Destino</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Produto</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Transportador</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Valor</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Dist.</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-left px-3 sm:px-4 py-3 font-semibold text-gray-600">Origem</th>
+                <th className="text-left px-3 sm:px-4 py-3 font-semibold text-gray-600">Destino</th>
+                <th className="text-left px-3 sm:px-4 py-3 font-semibold text-gray-600">Produto</th>
+                <th className="text-left px-3 sm:px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Transportador</th>
+                <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Valor</th>
+                <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Dist.</th>
+                <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -230,7 +262,7 @@ export default function Precos() {
                   <td className="px-4 py-3 font-medium">{item.origem_nome}</td>
                   <td className="px-4 py-3">{item.destino_nome}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.produto_tipo === 'Grao' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{item.produto_nome}</span></td>
-                  <td className="px-4 py-3 text-gray-600">{item.fornecedor_nome || 'Geral'}</td>
+                  <td className="px-3 sm:px-4 py-3 text-gray-600 hidden md:table-cell">{item.fornecedor_nome || 'Geral'}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700">{fmtCur(item.valor)} <span className="text-xs text-gray-400 font-normal">{item.unidade_preco}</span></td>
                   <td className="px-4 py-3 text-right text-gray-600">{item.distancia_km ? `${item.distancia_km} km` : '-'}</td>
                   <td className="px-4 py-3 text-right space-x-1">
@@ -247,7 +279,7 @@ export default function Precos() {
       )}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white sm:rounded-xl shadow-xl w-full max-w-lg sm:mx-4 max-h-screen sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">{editing ? 'Editar Preco' : 'Novo Preco'}</h2>
               <button onClick={() => setShowForm(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
@@ -281,7 +313,7 @@ export default function Precos() {
                   {transportadores.map((f: any) => <option key={f.id} value={f.id}>{f.nome_fantasia || f.nome}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$) *</label>
                   <input type="number" step="0.01" value={form.valor} onChange={e => setForm({...form, valor: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />

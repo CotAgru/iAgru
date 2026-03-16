@@ -287,16 +287,16 @@ export default function Cadastros() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Cadastros</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-          <Plus className="w-4 h-4" /> Novo Cadastro
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Cadastros</h1>
+        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Cadastro
         </button>
       </div>
 
       {/* Filtros */}
-      <div className="mb-4 flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="mb-4 flex gap-2 sm:gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
           <input type="text" placeholder="Buscar por nome, CNPJ ou cidade..." value={busca} onChange={e => setBusca(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
@@ -310,8 +310,8 @@ export default function Cadastros() {
 
       {/* Tabela */}
       {loading ? <p className="text-gray-500">Carregando...</p> : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Nome</th>
@@ -354,7 +354,7 @@ export default function Cadastros() {
       {/* Modal de Formulario */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white sm:rounded-xl shadow-xl w-full max-w-2xl sm:mx-4 max-h-screen sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">{editing ? 'Editar Cadastro' : 'Novo Cadastro'}</h2>
               <button onClick={() => setShowForm(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>

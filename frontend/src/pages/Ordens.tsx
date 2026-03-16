@@ -175,16 +175,16 @@ export default function Ordens() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Ordens de Carregamento</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Ordens de Carregamento</h1>
+        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">
           <Plus className="w-4 h-4" /> Nova Ordem
         </button>
       </div>
 
       {loading ? <p className="text-gray-500">Carregando...</p> : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Numero</th>
@@ -224,7 +224,7 @@ export default function Ordens() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white sm:rounded-xl shadow-xl w-full max-w-3xl sm:mx-4 max-h-screen sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">
                 {editing ? `Editar Ordem ${editing.numero_ordem_fmt || ''}` : 'Nova Ordem de Carregamento'}
@@ -232,28 +232,19 @@ export default function Ordens() {
               <button onClick={() => { setShowForm(false); load() }} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 space-y-3">
-              {/* Nome + Status */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Ordem *</label>
-                  <input type="text" value={form.nome_ordem} onChange={e => setForm({...form, nome_ordem: e.target.value})}
-                    placeholder="Ex: Transporte Soja Catalao"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </div>
+              {/* Nome da Ordem */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Ordem *</label>
+                <input type="text" value={form.nome_ordem} onChange={e => setForm({...form, nome_ordem: e.target.value})}
+                  placeholder="Ex: Transporte Soja Catalao"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
               {editing && (
                 <p className="text-xs text-gray-500">Numero gerado: <span className="font-mono font-semibold text-blue-600">{editing.numero_ordem_fmt || 'sera gerado ao salvar'}</span></p>
               )}
 
               {/* Origem + Destino */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
                   <select value={form.origem_id} onChange={e => setForm({...form, origem_id: e.target.value})}
@@ -273,7 +264,7 @@ export default function Ordens() {
               </div>
 
               {/* Produto + Qtd + Unidade */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
                   <select value={form.produto_id} onChange={e => setForm({...form, produto_id: e.target.value})}

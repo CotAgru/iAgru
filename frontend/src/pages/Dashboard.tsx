@@ -43,18 +43,18 @@ export default function Dashboard() {
       {loading ? (
         <p className="text-gray-500">Carregando...</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {cards.map((card) => {
             const Icon = card.icon
             return (
-              <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">{card.label}</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-1">{card.value}</p>
+              <div key={card.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">{card.label}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-gray-800 mt-1">{card.value}</p>
                   </div>
-                  <div className={`${card.color} p-3 rounded-lg`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`${card.color} p-2 sm:p-3 rounded-lg flex-shrink-0`}>
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                 </div>
               </div>
