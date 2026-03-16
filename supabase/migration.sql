@@ -2,7 +2,7 @@
 -- IMPORTANTE: Execute primeiro o drop_old.sql se ja tiver a versao anterior
 
 -- ============================================================
--- 1. Dropar tabelas antigas (caso existam)
+-- 1. Dropar tabelas antigas (CASCADE remove triggers e FKs)
 -- ============================================================
 DROP TABLE IF EXISTS precos_contratados CASCADE;
 DROP TABLE IF EXISTS veiculos CASCADE;
@@ -10,13 +10,6 @@ DROP TABLE IF EXISTS locais CASCADE;
 DROP TABLE IF EXISTS fornecedores CASCADE;
 DROP TABLE IF EXISTS produtos CASCADE;
 DROP TABLE IF EXISTS cadastros CASCADE;
-
-DROP TRIGGER IF EXISTS trg_fornecedores_updated_at ON fornecedores;
-DROP TRIGGER IF EXISTS trg_veiculos_updated_at ON veiculos;
-DROP TRIGGER IF EXISTS trg_locais_updated_at ON locais;
-DROP TRIGGER IF EXISTS trg_produtos_updated_at ON produtos;
-DROP TRIGGER IF EXISTS trg_precos_updated_at ON precos_contratados;
-DROP TRIGGER IF EXISTS trg_cadastros_updated_at ON cadastros;
 
 -- ============================================================
 -- 2. Tabela unificada CADASTROS (antigos fornecedores + locais)
