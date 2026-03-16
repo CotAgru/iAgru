@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Truck, User, Minus, Check, CarFront } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Truck, User, Minus, Check, CarFront, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getOrdens, createOrdem, updateOrdem, deleteOrdem, getCadastros, getProdutos, getVeiculos, getPrecos, getOrdemTransportadores, addOrdemTransportador, removeOrdemTransportador, getOperacoes } from '../services/api'
+import { getOrdens, createOrdem, updateOrdem, deleteOrdem, getCadastros, getProdutos, getVeiculos, getPrecos, getOrdemTransportadores, addOrdemTransportador, removeOrdemTransportador, getOperacoes, createCadastro, createProduto, createPreco } from '../services/api'
 
 const STATUS_OPTIONS = [
   { value: 'pendente', label: 'Pendente', color: 'bg-yellow-100 text-yellow-700' },
@@ -43,8 +43,13 @@ export default function Ordens() {
   // Transportadora selecionada e motoristas com checkboxes
   const [selectedTranspId, setSelectedTranspId] = useState('')
 
-  // Modal overlay: qual tela abrir (cadastro, produto, preco)
-  const [overlayTarget, setOverlayTarget] = useState<string | null>(null)
+  // Pop-up inline: tipo e contexto
+  const [popupType, setPopupType] = useState<string | null>(null)
+  const [popupContext, setPopupContext] = useState('')
+  const [savingPopup, setSavingPopup] = useState(false)
+  const [miniCadForm, setMiniCadForm] = useState({ nome: '', nome_fantasia: '', cpf_cnpj: '', tipos: [] as string[], uf: '', cidade: '', transportador_id: '' })
+  const [miniProdForm, setMiniProdForm] = useState({ nome: '', tipo: 'Grao', unidade_medida: 'ton' })
+  const [miniPrecoForm, setMiniPrecoForm] = useState({ origem_id: '', destino_id: '', produto_id: '', fornecedor_id: '', valor: '', unidade_preco: 'R$/ton' })
 
   const load = () => {
     setLoading(true)
@@ -154,7 +159,7 @@ export default function Ordens() {
 
   // Ao selecionar transportadora, carregar seus motoristas/placas automaticamente
   const handleSelectTransp = async (transpId: string) => {
-    if (transpId === '__novo__') { setOverlayTarget('transportadora'); return }
+    if (transpId === '__novo__') { openPopupCadastro('transportadora'); return }
     setSelectedTranspId(transpId)
     if (!editing?.id || !transpId) return
 
@@ -186,7 +191,7 @@ export default function Ordens() {
   }
 
   const handleAddMotoristaAvulso = async (motId: string) => {
-    if (motId === '__novo__') { setOverlayTarget('motorista'); return }
+    if (motId === '__novo__') { openPopupCadastro('motorista'); return }
     if (!editing?.id || !motId) return
     const mot = allMotoristas.find(m => m.id === motId)
     const veic = veiculos.find((v: any) => v.cadastro_id === motId)
@@ -215,14 +220,73 @@ export default function Ordens() {
     catch { toast.error('Erro ao remover') }
   }
 
-  // Ao fechar overlay, recarregar dados
-  const closeOverlay = () => { setOverlayTarget(null); reloadData() }
+  // === Pop-up open helpers ===
+  const openPopupCadastro = (context: string) => {
+    const defaultTipos = context === 'transportadora' ? ['Transportadora'] : context === 'motorista' ? ['Motorista'] : []
+    setMiniCadForm({ nome: '', nome_fantasia: '', cpf_cnpj: '', tipos: defaultTipos, uf: '', cidade: '', transportador_id: '' })
+    setPopupContext(context)
+    setPopupType('cadastro')
+  }
+  const openPopupProduto = () => {
+    setMiniProdForm({ nome: '', tipo: 'Grao', unidade_medida: 'ton' })
+    setPopupType('produto')
+  }
+  const openPopupPreco = () => {
+    setMiniPrecoForm({ origem_id: form.origem_id, destino_id: form.destino_id, produto_id: form.produto_id || '', fornecedor_id: '', valor: '', unidade_preco: 'R$/ton' })
+    setPopupType('preco')
+  }
+
+  // === Pop-up save handlers ===
+  const savePopupCadastro = async () => {
+    if (!miniCadForm.nome.trim()) { toast.error('Nome e obrigatorio'); return }
+    setSavingPopup(true)
+    try {
+      const payload: any = { nome: miniCadForm.nome, nome_fantasia: miniCadForm.nome_fantasia || null, cpf_cnpj: miniCadForm.cpf_cnpj || null, tipos: miniCadForm.tipos, uf: miniCadForm.uf || null, cidade: miniCadForm.cidade || null, ativo: true }
+      if (popupContext === 'motorista' && miniCadForm.transportador_id) payload.transportador_id = miniCadForm.transportador_id
+      const created = await createCadastro(payload)
+      await reloadData()
+      if (popupContext === 'origem') setForm(prev => ({ ...prev, origem_id: created.id, preco_id: '' }))
+      else if (popupContext === 'destino') setForm(prev => ({ ...prev, destino_id: created.id, preco_id: '' }))
+      toast.success('Cadastro criado!')
+      setPopupType(null)
+    } catch (err: any) { toast.error('Erro: ' + (err?.message || '')) }
+    finally { setSavingPopup(false) }
+  }
+
+  const savePopupProduto = async () => {
+    if (!miniProdForm.nome.trim()) { toast.error('Nome e obrigatorio'); return }
+    setSavingPopup(true)
+    try {
+      const created = await createProduto({ nome: miniProdForm.nome, tipo: miniProdForm.tipo, unidade_medida: miniProdForm.unidade_medida, ativo: true })
+      await reloadData()
+      setForm(prev => ({ ...prev, produto_id: created.id }))
+      toast.success('Produto criado!')
+      setPopupType(null)
+    } catch (err: any) { toast.error('Erro: ' + (err?.message || '')) }
+    finally { setSavingPopup(false) }
+  }
+
+  const savePopupPreco = async () => {
+    if (!miniPrecoForm.origem_id || !miniPrecoForm.destino_id || !miniPrecoForm.produto_id || !miniPrecoForm.valor) {
+      toast.error('Origem, destino, produto e valor sao obrigatorios'); return
+    }
+    setSavingPopup(true)
+    try {
+      const created = await createPreco({ origem_id: miniPrecoForm.origem_id, destino_id: miniPrecoForm.destino_id, produto_id: miniPrecoForm.produto_id, fornecedor_id: miniPrecoForm.fornecedor_id || null, valor: Number(miniPrecoForm.valor), unidade_preco: miniPrecoForm.unidade_preco, ativo: true })
+      await reloadData()
+      setForm(prev => ({ ...prev, preco_id: created.id }))
+      toast.success('Preco criado!')
+      setPopupType(null)
+    } catch (err: any) { toast.error('Erro: ' + (err?.message || '')) }
+    finally { setSavingPopup(false) }
+  }
 
   const handleSelectChange = (field: string, value: string) => {
     if (value === '__novo__') {
-      if (field === 'origem_id' || field === 'destino_id') setOverlayTarget('cadastro')
-      else if (field === 'produto_id') setOverlayTarget('produto')
-      else if (field === 'preco_id') setOverlayTarget('preco')
+      if (field === 'origem_id') openPopupCadastro('origem')
+      else if (field === 'destino_id') openPopupCadastro('destino')
+      else if (field === 'produto_id') openPopupProduto()
+      else if (field === 'preco_id') openPopupPreco()
       return
     }
     if (field === 'origem_id' || field === 'destino_id') {
@@ -472,35 +536,203 @@ export default function Ordens() {
         </div>
       )}
 
-      {/* Overlay para navegar a outra tela */}
-      {overlayTarget && (
+      {/* Pop-up: Novo Cadastro */}
+      {popupType === 'cadastro' && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-          <div className="bg-white sm:rounded-xl shadow-2xl w-full max-w-xl sm:mx-4 max-h-screen sm:max-h-[85vh] overflow-y-auto">
+          <div className="bg-white sm:rounded-xl shadow-2xl w-full max-w-md sm:mx-4 max-h-screen sm:max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b bg-green-50">
               <h2 className="text-base font-semibold text-green-800">
-                {overlayTarget === 'cadastro' && 'Ir para Cadastros'}
-                {overlayTarget === 'produto' && 'Ir para Produtos'}
-                {overlayTarget === 'preco' && 'Ir para Precos Contratados'}
-                {overlayTarget === 'transportadora' && 'Ir para Cadastros (Transportadora)'}
-                {overlayTarget === 'motorista' && 'Ir para Cadastros (Motorista)'}
+                {popupContext === 'transportadora' ? 'Nova Transportadora' : popupContext === 'motorista' ? 'Novo Motorista' : 'Novo Cadastro'}
               </h2>
-              <button onClick={closeOverlay} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
+              <button onClick={() => setPopupType(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 text-center space-y-4">
-              <p className="text-gray-600 text-sm">
-                Para criar um novo registro, acesse a pagina correspondente pelo menu lateral.
-                Ao voltar, os dados estarao atualizados automaticamente.
-              </p>
-              <div className="flex justify-center gap-3">
-                <a href={overlayTarget === 'produto' ? '/produtos' : overlayTarget === 'preco' ? '/precos' : '/cadastros'}
-                  target="_blank" rel="noopener noreferrer"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
-                  Abrir em nova aba
-                </a>
-                <button onClick={closeOverlay} className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-                  Fechar e Atualizar
-                </button>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome / Razao Social *</label>
+                <input type="text" value={miniCadForm.nome} onChange={e => setMiniCadForm({...miniCadForm, nome: e.target.value})}
+                  placeholder="Nome completo ou razao social" autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Fantasia</label>
+                <input type="text" value={miniCadForm.nome_fantasia} onChange={e => setMiniCadForm({...miniCadForm, nome_fantasia: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CPF / CNPJ</label>
+                <input type="text" value={miniCadForm.cpf_cnpj} onChange={e => setMiniCadForm({...miniCadForm, cpf_cnpj: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+              </div>
+              {(popupContext === 'origem' || popupContext === 'destino') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo(s)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {TIPOS_ORIGEM.map(t => (
+                      <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input type="checkbox" checked={miniCadForm.tipos.includes(t)}
+                          onChange={e => setMiniCadForm(prev => ({ ...prev, tipos: e.target.checked ? [...prev.tipos, t] : prev.tipos.filter(x => x !== t) }))}
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                        {t}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(popupContext === 'transportadora' || popupContext === 'motorista') && (
+                <p className="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                  Tipo: <span className="font-semibold">{miniCadForm.tipos.join(', ')}</span>
+                </p>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+                  <input type="text" maxLength={2} value={miniCadForm.uf} onChange={e => setMiniCadForm({...miniCadForm, uf: e.target.value.toUpperCase()})}
+                    placeholder="GO" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                  <input type="text" value={miniCadForm.cidade} onChange={e => setMiniCadForm({...miniCadForm, cidade: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+              </div>
+              {popupContext === 'motorista' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transportadora vinculada</label>
+                  <select value={miniCadForm.transportador_id} onChange={e => setMiniCadForm({...miniCadForm, transportador_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="">Nenhuma</option>
+                    {transportadoras.map((t: any) => <option key={t.id} value={t.id}>{t.nome_fantasia || t.nome}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button onClick={() => setPopupType(null)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancelar</button>
+              <button onClick={savePopupCadastro} disabled={savingPopup}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                {savingPopup && <Loader2 className="w-4 h-4 animate-spin" />}
+                {savingPopup ? 'Salvando...' : 'Criar Cadastro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-up: Novo Produto */}
+      {popupType === 'produto' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white sm:rounded-xl shadow-2xl w-full max-w-sm sm:mx-4">
+            <div className="flex items-center justify-between p-4 border-b bg-green-50">
+              <h2 className="text-base font-semibold text-green-800">Novo Produto</h2>
+              <button onClick={() => setPopupType(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <input type="text" value={miniProdForm.nome} onChange={e => setMiniProdForm({...miniProdForm, nome: e.target.value})}
+                  placeholder="Ex: Soja em grao" autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <select value={miniProdForm.tipo} onChange={e => setMiniProdForm({...miniProdForm, tipo: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="Grao">Grao</option><option value="Insumo">Insumo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
+                  <select value={miniProdForm.unidade_medida} onChange={e => setMiniProdForm({...miniProdForm, unidade_medida: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="ton">ton</option><option value="kg">kg</option><option value="sc">sc</option><option value="l">l</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button onClick={() => setPopupType(null)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancelar</button>
+              <button onClick={savePopupProduto} disabled={savingPopup}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                {savingPopup && <Loader2 className="w-4 h-4 animate-spin" />}
+                {savingPopup ? 'Salvando...' : 'Criar Produto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-up: Novo Preco Contratado */}
+      {popupType === 'preco' && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white sm:rounded-xl shadow-2xl w-full max-w-md sm:mx-4 max-h-screen sm:max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b bg-green-50">
+              <h2 className="text-base font-semibold text-green-800">Novo Preco Contratado</h2>
+              <button onClick={() => setPopupType(null)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              {form.origem_id && form.destino_id && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" /> Origem e destino preenchidos da ordem
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
+                  <select value={miniPrecoForm.origem_id} onChange={e => setMiniPrecoForm({...miniPrecoForm, origem_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+                    <option value="">Selecione...</option>
+                    {origens.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
+                  <select value={miniPrecoForm.destino_id} onChange={e => setMiniPrecoForm({...miniPrecoForm, destino_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm">
+                    <option value="">Selecione...</option>
+                    {origens.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
+                <select value={miniPrecoForm.produto_id} onChange={e => setMiniPrecoForm({...miniPrecoForm, produto_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="">Selecione...</option>
+                  {produtos.map((p: any) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transportador</label>
+                <select value={miniPrecoForm.fornecedor_id} onChange={e => setMiniPrecoForm({...miniPrecoForm, fornecedor_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  <option value="">Todos (preco geral)</option>
+                  {transportadoras.map((t: any) => <option key={t.id} value={t.id}>{t.nome_fantasia || t.nome}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$) *</label>
+                  <input type="number" step="0.01" value={miniPrecoForm.valor} onChange={e => setMiniPrecoForm({...miniPrecoForm, valor: e.target.value})}
+                    autoFocus={!!(form.origem_id && form.destino_id)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
+                  <select value={miniPrecoForm.unidade_preco} onChange={e => setMiniPrecoForm({...miniPrecoForm, unidade_preco: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="R$/ton">R$/ton</option><option value="R$/sc">R$/sc</option><option value="R$/km">R$/km</option><option value="R$/viagem">R$/viagem</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button onClick={() => setPopupType(null)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">Cancelar</button>
+              <button onClick={savePopupPreco} disabled={savingPopup}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                {savingPopup && <Loader2 className="w-4 h-4 animate-spin" />}
+                {savingPopup ? 'Salvando...' : 'Criar Preco'}
+              </button>
             </div>
           </div>
         </div>
