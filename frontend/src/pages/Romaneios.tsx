@@ -372,7 +372,11 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       if (!resp.ok) {
         const errText = await resp.text()
         console.error('🤖 OCR: Erro HTTP', resp.status, errText)
-        toast.error(`Erro na API Gemini (${resp.status})`)
+        if (resp.status === 429) {
+          toast.error('Limite de requisições da API Gemini atingido. Aguarde alguns minutos e tente novamente.')
+        } else {
+          toast.error(`Erro na API Gemini (${resp.status})`)
+        }
         return
       }
       
@@ -768,32 +772,38 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
                 </div>
                 {ocrLoading && <p className="text-sm text-purple-600 mt-2">Analisando imagem com Gemini AI...</p>}
                 {imagePreview && (
-                  <div className="mt-3">
-                    {imageError ? (
-                      <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-                        <FileText className="w-5 h-5" />
-                        <span>Imagem indisponível. Anexe novamente para atualizar.</span>
-                      </div>
-                    ) : (
-                      <div className="relative group cursor-pointer" onClick={() => {
-                        if (imagePreview.startsWith('data:')) {
-                          setLightboxImage(imagePreview)
-                        } else {
-                          window.open(imagePreview, '_blank')
-                        }
-                      }}>
-                        <img src={imagePreview} alt="Romaneio"
-                          onError={() => setImageError(true)}
-                          className="max-h-48 rounded-lg border shadow-sm object-contain" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
+                  <div className="mt-3 relative">
+                    <div className="relative group cursor-pointer" onClick={() => {
+                      if (imagePreview.startsWith('data:')) {
+                        setLightboxImage(imagePreview)
+                      } else {
+                        window.open(imagePreview, '_blank')
+                      }
+                    }}>
+                      <img src={imagePreview} alt="Romaneio" 
+                        className="w-full max-h-64 rounded-lg border shadow-sm object-contain bg-gray-100" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
+                        <div className="flex flex-col items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                           {imagePreview.startsWith('data:') ? (
-                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <><ZoomIn className="w-8 h-8" /><span className="text-sm font-semibold">Ampliar</span></>
                           ) : (
-                            <ExternalLink className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <><ExternalLink className="w-8 h-8" /><span className="text-sm font-semibold">Abrir</span></>
                           )}
                         </div>
                       </div>
-                    )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null)
+                        setForm(prev => ({ ...prev, imagem_url: null }))
+                        toast.success('Imagem removida')
+                      }}
+                      className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 shadow-lg transition-colors z-10"
+                      title="Excluir imagem"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -1083,26 +1093,23 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
             {viewingItem.imagem_url && (
               <Section title="Anexo do Romaneio" icon={<Camera className="w-5 h-5" />}>
                 <div className="col-span-full">
-                  <div className="relative group cursor-pointer" onClick={() => setLightboxImage(viewingItem.imagem_url)}>
-                    <img src={viewingItem.imagem_url} alt="Romaneio" 
-                      className="w-full max-h-64 rounded-lg border shadow-sm object-contain bg-gray-100" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
-                      <div className="flex flex-col items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ZoomIn className="w-8 h-8" />
-                        <span className="text-sm font-semibold">Ampliar imagem</span>
+                  <a 
+                    href={viewingItem.imagem_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <div className="relative group cursor-pointer">
+                      <img src={viewingItem.imagem_url} alt="Romaneio" 
+                        className="w-full max-h-64 rounded-lg border shadow-sm object-contain bg-gray-100" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
+                        <div className="flex flex-col items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ExternalLink className="w-8 h-8" />
+                          <span className="text-sm font-semibold">Abrir em nova aba</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <a 
-                      href={viewingItem.imagem_url} 
-                      download="romaneio.jpg"
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
-                    >
-                      <Upload className="w-4 h-4" />
-                      Baixar Imagem
-                    </a>
-                  </div>
+                  </a>
                 </div>
               </Section>
             )}
