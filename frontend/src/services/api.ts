@@ -251,24 +251,43 @@ export const deleteRomaneio = async (id: string) =>
 
 // === UPLOAD IMAGEM ROMANEIO (Supabase Storage) ===
 export const uploadRomaneioImage = async (base64DataUrl: string, romaneioId?: string): Promise<string> => {
+  console.log('🔄 Iniciando upload de imagem...')
+  
   const match = base64DataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
-  if (!match) throw new Error('Formato de imagem inválido')
+  if (!match) {
+    console.error('❌ Formato de imagem inválido')
+    throw new Error('Formato de imagem inválido')
+  }
+  
   const mimeType = match[1]
   const ext = mimeType.split('/')[1] || 'jpeg'
+  console.log(`📦 Tipo: ${mimeType}, Extensão: ${ext}`)
+  
   const byteString = atob(match[2])
   const ab = new ArrayBuffer(byteString.length)
   const ia = new Uint8Array(ab)
   for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
   const blob = new Blob([ab], { type: mimeType })
+  console.log(`📊 Tamanho do blob: ${blob.size} bytes`)
 
   const fileName = `${romaneioId || crypto.randomUUID()}_${Date.now()}.${ext}`
-  const { error } = await supabase.storage
+  console.log(`📁 Nome do arquivo: ${fileName}`)
+  
+  const { data, error } = await supabase.storage
     .from('romaneios-img')
     .upload(fileName, blob, { contentType: mimeType, upsert: true })
-  if (error) throw error
+  
+  if (error) {
+    console.error('❌ Erro no upload:', error)
+    throw new Error(`Erro ao fazer upload: ${error.message}`)
+  }
+  
+  console.log('✅ Upload concluído:', data)
 
   const { data: urlData } = supabase.storage
     .from('romaneios-img')
     .getPublicUrl(fileName)
+  
+  console.log('🔗 URL pública gerada:', urlData.publicUrl)
   return urlData.publicUrl
 }
