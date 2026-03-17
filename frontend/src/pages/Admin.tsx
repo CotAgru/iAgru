@@ -76,6 +76,8 @@ export default function Admin() {
   const [editing, setEditing] = useState<any>(null)
   const [formNome, setFormNome] = useState('')
   const [formAtivo, setFormAtivo] = useState(true)
+  const [formEixos, setFormEixos] = useState(0)
+  const [formPesoPauta, setFormPesoPauta] = useState(0)
   const [saving, setSaving] = useState(false)
 
   const load = () => {
@@ -87,14 +89,25 @@ export default function Admin() {
   }
   useEffect(() => { load() }, [])
 
-  const openNew = () => { setEditing(null); setFormNome(''); setFormAtivo(true); setShowForm(true) }
-  const openEdit = (item: any) => { setEditing(item); setFormNome(item.nome); setFormAtivo(item.ativo); setShowForm(true) }
+  const openNew = () => { 
+    setEditing(null); setFormNome(''); setFormAtivo(true); setFormEixos(0); setFormPesoPauta(0); setShowForm(true) 
+  }
+  const openEdit = (item: any) => { 
+    setEditing(item); setFormNome(item.nome); setFormAtivo(item.ativo)
+    setFormEixos(item.eixos || 0); setFormPesoPauta(item.peso_pauta_kg || 0); setShowForm(true) 
+  }
 
   const save = async () => {
     if (!formNome.trim()) { toast.error('Nome é obrigatório'); return }
+    if (tab === 'tipos_caminhao' && formEixos < 0) { toast.error('Eixos deve ser >= 0'); return }
+    if (tab === 'tipos_caminhao' && formPesoPauta < 0) { toast.error('Peso pauta deve ser >= 0'); return }
     setSaving(true)
     try {
-      const payload = { nome: formNome.trim(), ativo: formAtivo }
+      const payload: any = { nome: formNome.trim(), ativo: formAtivo }
+      if (tab === 'tipos_caminhao') {
+        payload.eixos = formEixos
+        payload.peso_pauta_kg = formPesoPauta
+      }
       if (tab === 'ano_safra') {
         if (editing) await updateAnoSafra(editing.id, payload)
         else await createAnoSafra(payload)
@@ -171,9 +184,25 @@ export default function Admin() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                 <input type="text" value={formNome} onChange={e => setFormNome(e.target.value)} autoFocus
-                  placeholder={tab === 'ano_safra' ? 'Ex: 25/26' : 'Ex: Remessa para Depósito'}
+                  placeholder={tab === 'ano_safra' ? 'Ex: 25/26' : tab === 'tipos_caminhao' ? 'Ex: Carreta' : 'Ex: Remessa para Depósito'}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
+              {tab === 'tipos_caminhao' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Número de Eixos *</label>
+                    <input type="number" value={formEixos} onChange={e => setFormEixos(Number(e.target.value))} min="0"
+                      placeholder="Ex: 6"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Peso Pauta (kg) *</label>
+                    <input type="number" value={formPesoPauta} onChange={e => setFormPesoPauta(Number(e.target.value))} min="0"
+                      placeholder="Ex: 30000"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={formAtivo} onChange={e => setFormAtivo(e.target.checked)}
                   className="rounded border-gray-300 text-green-600 focus:ring-green-500" />

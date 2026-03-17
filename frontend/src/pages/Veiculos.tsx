@@ -1,27 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Filter, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getVeiculos, createVeiculo, updateVeiculo, deleteVeiculo, getCadastros } from '../services/api'
+import { getVeiculos, createVeiculo, updateVeiculo, deleteVeiculo, getCadastros, getTiposCaminhao } from '../services/api'
 import ViewModal, { Field } from '../components/ViewModal'
 
-// Tipos ANTT com correlacao eixos / peso pauta (carga liquida)
-const TIPOS_CAMINHAO = [
-  { nome: 'Toco', eixos: 2, peso_pauta_kg: 8000 },
-  { nome: 'Truck', eixos: 3, peso_pauta_kg: 14000 },
-  { nome: 'Bi-Truck', eixos: 4, peso_pauta_kg: 20000 },
-  { nome: 'Carreta LS', eixos: 5, peso_pauta_kg: 27000 },
-  { nome: 'Carreta', eixos: 6, peso_pauta_kg: 37000 },
-  { nome: 'Bitrem', eixos: 7, peso_pauta_kg: 42000 },
-  { nome: 'Rodotrem', eixos: 9, peso_pauta_kg: 57000 },
-  { nome: 'Treminhao', eixos: 9, peso_pauta_kg: 57000 },
-  { nome: 'Outro', eixos: 0, peso_pauta_kg: 0 },
-]
-
-const emptyForm = { cadastro_id: '', placa: '', tipo_caminhao: 'Carreta', eixos: 6, peso_pauta_kg: 37000, marca: '', modelo: '', ano: '', observacoes: '', ativo: true }
+const emptyForm = { cadastro_id: '', placa: '', tipo_caminhao: '', eixos: 0, peso_pauta_kg: 0, marca: '', modelo: '', ano: '', observacoes: '', ativo: true }
 
 export default function Veiculos() {
   const [items, setItems] = useState<any[]>([])
   const [proprietarios, setProprietarios] = useState<any[]>([])
+  const [tiposCaminhao, setTiposCaminhao] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -33,10 +21,11 @@ export default function Veiculos() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getVeiculos(), getCadastros()])
-      .then(([v, c]) => {
+    Promise.all([getVeiculos(), getCadastros(), getTiposCaminhao()])
+      .then(([v, c, tc]) => {
         setItems(v)
         setProprietarios(c.filter((x: any) => (x.tipos || []).some((t: string) => ['Transportadora', 'Motorista'].includes(t))))
+        setTiposCaminhao(tc.filter((t: any) => t.ativo))
       })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
@@ -44,7 +33,7 @@ export default function Veiculos() {
   useEffect(() => { load() }, [])
 
   const onTipoChange = (tipo: string) => {
-    const found = TIPOS_CAMINHAO.find(t => t.nome === tipo)
+    const found = tiposCaminhao.find(t => t.nome === tipo)
     setForm(prev => ({
       ...prev,
       tipo_caminhao: tipo,
@@ -82,7 +71,7 @@ export default function Veiculos() {
   }
 
   const FILTER_FIELDS = [
-    { key: 'tipo', label: 'Tipo Caminhão', type: 'select', options: () => TIPOS_CAMINHAO.map(t => ({ value: t.nome, label: t.nome })) },
+    { key: 'tipo', label: 'Tipo Caminhão', type: 'select', options: () => tiposCaminhao.map((t: any) => ({ value: t.nome, label: t.nome })) },
     { key: 'proprietario', label: 'Proprietário', type: 'select', options: () => proprietarios.map((p: any) => ({ value: p.id, label: p.nome_fantasia || p.nome })) },
     { key: 'placa', label: 'Placa', type: 'text' },
     { key: 'marca', label: 'Marca', type: 'text' },
@@ -254,7 +243,7 @@ export default function Veiculos() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Caminhao *</label>
                   <select value={form.tipo_caminhao} onChange={e => onTipoChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    {TIPOS_CAMINHAO.map(t => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos)</option>)}
+                    {tiposCaminhao.map((t: any) => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos)</option>)}
                   </select>
                 </div>
               </div>

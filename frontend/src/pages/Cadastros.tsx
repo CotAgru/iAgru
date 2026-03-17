@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos } from '../services/api'
+import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos, getTiposCaminhao } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 import ViewModal, { Field } from '../components/ViewModal'
 
@@ -10,18 +10,6 @@ const DEFAULT_CENTER = { lat: -15.7801, lng: -47.9292 }
 
 const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Produtor', 'Transportadora']
 const TIPOS_COM_LOCALIZACAO = ['Fazenda', 'Armazem', 'Industria', 'Porto', 'Fornecedor']
-
-const TIPOS_CAMINHAO = [
-  { nome: 'Toco', eixos: 2, peso_pauta_kg: 8000 },
-  { nome: 'Truck', eixos: 3, peso_pauta_kg: 14000 },
-  { nome: 'Bi-Truck', eixos: 4, peso_pauta_kg: 20000 },
-  { nome: 'Carreta LS', eixos: 5, peso_pauta_kg: 27000 },
-  { nome: 'Carreta', eixos: 6, peso_pauta_kg: 37000 },
-  { nome: 'Bitrem', eixos: 7, peso_pauta_kg: 42000 },
-  { nome: 'Rodotrem', eixos: 9, peso_pauta_kg: 57000 },
-  { nome: 'Treminhao', eixos: 9, peso_pauta_kg: 57000 },
-  { nome: 'Outro', eixos: 0, peso_pauta_kg: 0 },
-]
 
 interface Cadastro {
   id: string
@@ -118,12 +106,13 @@ export default function Cadastros() {
   const [veiculoForm, setVeiculoForm] = useState(emptyVeiculoForm)
   const [savedMotoristaId, setSavedMotoristaId] = useState<string | null>(null)
   const [allVeiculos, setAllVeiculos] = useState<any[]>([])
+  const [tiposCaminhao, setTiposCaminhao] = useState<any[]>([])
   const [viewingItem, setViewingItem] = useState<any>(null)
 
   const load = () => {
     setLoading(true)
-    Promise.all([getCadastros(), getVeiculos()])
-      .then(([c, v]) => { setItems(c); setAllVeiculos(v) })
+    Promise.all([getCadastros(), getVeiculos(), getTiposCaminhao()])
+      .then(([c, v, tc]) => { setItems(c); setAllVeiculos(v); setTiposCaminhao(tc.filter((t: any) => t.ativo)) })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
   }
@@ -269,7 +258,7 @@ export default function Cadastros() {
   }
 
   const onVeiculoTipoChange = (tipo: string) => {
-    const found = TIPOS_CAMINHAO.find(t => t.nome === tipo)
+    const found = tiposCaminhao.find((t: any) => t.nome === tipo)
     setVeiculoForm(prev => ({ ...prev, tipo_caminhao: tipo, eixos: found?.eixos ?? 0, peso_pauta_kg: found?.peso_pauta_kg ?? 0 }))
   }
 
@@ -710,7 +699,7 @@ export default function Cadastros() {
                           <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Caminhao *</label>
                           <select value={veiculoForm.tipo_caminhao} onChange={e => onVeiculoTipoChange(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            {TIPOS_CAMINHAO.map(t => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos - {t.peso_pauta_kg.toLocaleString('pt-BR')} kg)</option>)}
+                            {tiposCaminhao.map((t: any) => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos - {t.peso_pauta_kg.toLocaleString('pt-BR')} kg)</option>)}
                           </select>
                         </div>
                       </div>
