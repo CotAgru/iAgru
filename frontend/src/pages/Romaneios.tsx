@@ -336,9 +336,12 @@ export default function Romaneios() {
     setOcrLoading(true)
     try {
       const base64Data = base64Image.split(',')[1]
+      if (!base64Data) { toast.error('Imagem inválida'); return }
       const mimeType = base64Image.split(';')[0].split(':')[1] || 'image/jpeg'
+      console.log('🤖 OCR: Enviando imagem para Gemini...', { mimeType, dataLength: base64Data.length })
+      
       const prompt = `Analise esta imagem de um romaneio/ticket de pesagem agrícola brasileiro.
-Extraia os seguintes campos e retorne APENAS um JSON válido (sem markdown, sem comentários):
+Extraia os seguintes campos e retorne APENAS um JSON válido (sem markdown, sem comentários, sem blocos de código):
 {
   "numero_ticket": "",
   "data_saida_origem": "YYYY-MM-DD",
@@ -358,17 +361,40 @@ Extraia os seguintes campos e retorne APENAS um JSON válido (sem markdown, sem 
   "peso_corrigido": 0,
   "transgenia": "Sim|Não|"
 }
-Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
+Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inteiros (sem decimais). Porcentagens com até 3 decimais.`
+
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64Data } }] }] }) }
       )
+      
+      if (!resp.ok) {
+        const errText = await resp.text()
+        console.error('🤖 OCR: Erro HTTP', resp.status, errText)
+        toast.error(`Erro na API Gemini (${resp.status})`)
+        return
+      }
+      
       const data = await resp.json()
+      console.log('🤖 OCR: Resposta completa:', JSON.stringify(data).substring(0, 500))
+      
+      if (data.error) {
+        console.error('🤖 OCR: Erro Gemini:', data.error)
+        toast.error(`Erro Gemini: ${data.error.message || 'desconhecido'}`)
+        return
+      }
+      
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      console.log('🤖 OCR: Texto extraído:', text.substring(0, 500))
+      
+      // Limpar markdown code blocks se existirem
+      const cleanText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
+      
       if (jsonMatch) {
         const p = JSON.parse(jsonMatch[0])
+        console.log('🤖 OCR: JSON parsed:', p)
         setForm(prev => ({
           ...prev,
           numero_ticket: p.numero_ticket || prev.numero_ticket,
@@ -390,8 +416,14 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
           transgenia: p.transgenia || prev.transgenia,
         }))
         toast.success('Dados extraídos com IA!')
-      } else { toast.error('Não foi possível extrair dados') }
-    } catch (err) { console.error('OCR error:', err); toast.error('Erro ao processar imagem') }
+      } else {
+        console.error('🤖 OCR: Nenhum JSON encontrado na resposta:', cleanText)
+        toast.error('Não foi possível extrair dados da imagem')
+      }
+    } catch (err: any) {
+      console.error('🤖 OCR: Erro:', err)
+      toast.error(`Erro ao processar: ${err.message || 'desconhecido'}`)
+    }
     finally { setOcrLoading(false) }
   }
 
