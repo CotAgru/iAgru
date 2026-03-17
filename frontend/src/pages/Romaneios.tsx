@@ -1051,18 +1051,30 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
             {viewingItem.imagem_url && (
               <Section title="Anexo do Romaneio" icon={<Camera className="w-5 h-5" />}>
                 <div className="col-span-full">
-                  <a href={viewingItem.imagem_url} target="_blank" rel="noopener noreferrer" className="block">
-                    <div className="relative group cursor-pointer">
-                      <img src={viewingItem.imagem_url} alt="Romaneio" 
-                        className="w-full max-h-64 rounded-lg border shadow-sm object-contain bg-gray-100" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
-                        <div className="flex flex-col items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ExternalLink className="w-8 h-8" />
-                          <span className="text-sm font-semibold">Abrir em nova aba</span>
-                        </div>
+                  <div 
+                    className="relative group cursor-pointer"
+                    onClick={() => {
+                      const url = viewingItem.imagem_url
+                      if (url && url.trim() !== '') {
+                        console.log('Abrindo URL:', url)
+                        const newTab = window.open(url, '_blank', 'noopener,noreferrer')
+                        if (!newTab) {
+                          toast.error('Bloqueador de pop-up ativo. Permita pop-ups para este site.')
+                        }
+                      } else {
+                        toast.error('URL da imagem não disponível')
+                      }
+                    }}
+                  >
+                    <img src={viewingItem.imagem_url} alt="Romaneio" 
+                      className="w-full max-h-64 rounded-lg border shadow-sm object-contain bg-gray-100" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
+                      <div className="flex flex-col items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ExternalLink className="w-8 h-8" />
+                        <span className="text-sm font-semibold">Abrir em nova aba</span>
                       </div>
                     </div>
-                  </a>
+                  </div>
                 </div>
               </Section>
             )}
