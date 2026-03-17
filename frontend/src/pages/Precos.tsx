@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Loader2, FileDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Filter, FileDown, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
 
@@ -19,6 +19,7 @@ export default function Precos() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(emptyForm)
+  const [searchTerm, setSearchTerm] = useState('')
   const [calcDist, setCalcDist] = useState(false)
 
   const load = () => {
@@ -236,12 +237,34 @@ export default function Precos() {
     if (win) win.onload = () => { URL.revokeObjectURL(url) }
   }
 
+  const filteredItems = items.filter(item => {
+    if (!searchTerm) return true
+    const term = searchTerm.toLowerCase()
+    return (
+      (item.origem_nome || '').toLowerCase().includes(term) ||
+      (item.destino_nome || '').toLowerCase().includes(term) ||
+      (item.produto_nome || '').toLowerCase().includes(term) ||
+      (item.fornecedor_nome || '').toLowerCase().includes(term) ||
+      (item.unidade_preco || '').toLowerCase().includes(term)
+    )
+  })
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Precos Contratados</h1>
         <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Preco</button>
       </div>
+
+      <div className="mb-4">
+        <div className="relative">
+          <input type="text" placeholder="Buscar por origem, destino, produto, fornecedor..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <Filter className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        </div>
+      </div>
+
       {loading ? <p className="text-gray-500">Carregando...</p> : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
           <table className="w-full text-sm min-w-[650px]">
@@ -257,7 +280,7 @@ export default function Precos() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {items.map((item: any) => (
+              {filteredItems.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{item.origem_nome}</td>
                   <td className="px-4 py-3">{item.destino_nome}</td>
@@ -272,7 +295,7 @@ export default function Precos() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum preco cadastrado</td></tr>}
+              {filteredItems.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum preco cadastrado</td></tr>}
             </tbody>
           </table>
         </div>

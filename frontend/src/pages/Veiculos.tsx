@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getVeiculos, createVeiculo, updateVeiculo, deleteVeiculo, getCadastros } from '../services/api'
 
@@ -25,6 +25,7 @@ export default function Veiculos() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(emptyForm)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -71,16 +72,38 @@ export default function Veiculos() {
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Deseja remover este veiculo?')) return
-    try { await deleteVeiculo(id); toast.success('Veiculo removido'); load() }
+    if (!confirm('Deseja remover este veículo?')) return
+    try { await deleteVeiculo(id); toast.success('Veículo removido'); load() }
     catch { toast.error('Erro ao remover') }
   }
+
+  const filteredItems = items.filter(item => {
+    if (!searchTerm) return true
+    const term = searchTerm.toLowerCase()
+    const prop = proprietarios.find(p => p.id === item.cadastro_id)
+    return (
+      (item.placa || '').toLowerCase().includes(term) ||
+      (item.tipo_caminhao || '').toLowerCase().includes(term) ||
+      (item.marca || '').toLowerCase().includes(term) ||
+      (item.modelo || '').toLowerCase().includes(term) ||
+      (prop?.nome_fantasia || prop?.nome || '').toLowerCase().includes(term)
+    )
+  })
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Veiculos</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Veículos</h1>
         <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Veiculo</button>
+      </div>
+
+      <div className="mb-4">
+        <div className="relative">
+          <input type="text" placeholder="Buscar por placa, tipo, marca, modelo, proprietário..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <Filter className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        </div>
       </div>
 
       {loading ? <p className="text-gray-500">Carregando...</p> : (
@@ -98,7 +121,7 @@ export default function Veiculos() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {items.map((item: any) => (
+              {filteredItems.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium">{item.placa}</td>
                   <td className="px-4 py-3">{item.tipo_caminhao}</td>
@@ -112,7 +135,7 @@ export default function Veiculos() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum veiculo cadastrado</td></tr>}
+              {filteredItems.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum veiculo cadastrado</td></tr>}
             </tbody>
           </table>
         </div>

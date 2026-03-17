@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getProdutos, createProduto, updateProduto, deleteProduto } from '../services/api'
 
@@ -13,6 +13,7 @@ export default function Produtos() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(emptyForm)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const load = () => { setLoading(true); getProdutos().then(setItems).catch(() => toast.error('Erro ao carregar')).finally(() => setLoading(false)) }
   useEffect(() => { load() }, [])
@@ -39,12 +40,32 @@ export default function Produtos() {
     catch { toast.error('Erro ao remover') }
   }
 
+  const filteredItems = items.filter(item => {
+    if (!searchTerm) return true
+    const term = searchTerm.toLowerCase()
+    return (
+      (item.nome || '').toLowerCase().includes(term) ||
+      (item.tipo || '').toLowerCase().includes(term) ||
+      (item.unidade_medida || '').toLowerCase().includes(term)
+    )
+  })
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Produtos Transportados</h1>
         <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Produto</button>
       </div>
+
+      <div className="mb-4">
+        <div className="relative">
+          <input type="text" placeholder="Buscar por nome, tipo, unidade..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <Filter className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        </div>
+      </div>
+
       {loading ? <p className="text-gray-500">Carregando...</p> : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto -mx-3 sm:mx-0">
           <table className="w-full text-sm min-w-[450px]">
@@ -58,7 +79,7 @@ export default function Produtos() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {items.map((item: any) => (
+              {filteredItems.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{item.nome}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.tipo === 'Grao' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{item.tipo === 'Grao' ? 'Grao' : 'Insumo'}</span></td>
@@ -70,7 +91,7 @@ export default function Produtos() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum produto cadastrado</td></tr>}
+              {filteredItems.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum produto cadastrado</td></tr>}
             </tbody>
           </table>
         </div>

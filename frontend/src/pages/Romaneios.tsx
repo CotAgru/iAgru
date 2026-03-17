@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, uploadRomaneioImage } from '../services/api'
 
@@ -71,8 +71,36 @@ export default function Romaneios() {
   const [ocrLoading, setOcrLoading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [showColumnConfig, setShowColumnConfig] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // Configuração de colunas (localStorage)
+  const DEFAULT_COLUMNS = [
+    { key: 'operacao', label: 'Operação', visible: true, order: 1 },
+    { key: 'ordem', label: 'Ordem Carreg.', visible: true, order: 2 },
+    { key: 'data_saida', label: 'Data Saída', visible: true, order: 3 },
+    { key: 'produtor', label: 'Produtor', visible: true, order: 4 },
+    { key: 'produto', label: 'Produto', visible: true, order: 5 },
+    { key: 'origem', label: 'Origem', visible: true, order: 6 },
+    { key: 'destino', label: 'Destino', visible: true, order: 7 },
+    { key: 'placa', label: 'Placa', visible: true, order: 8 },
+    { key: 'ticket', label: 'Ticket', visible: true, order: 9 },
+    { key: 'peso_liq_sdesc', label: 'P.Líq s/desc', visible: true, order: 10 },
+    { key: 'peso_liq_cdesc', label: 'P.Líq c/desc', visible: true, order: 11 },
+    { key: 'motorista', label: 'Motorista', visible: false, order: 12 },
+    { key: 'transportadora', label: 'Transportadora', visible: false, order: 13 },
+    { key: 'ano_safra', label: 'Ano Safra', visible: false, order: 14 },
+    { key: 'tipo_ticket', label: 'Tipo Ticket', visible: false, order: 15 },
+    { key: 'tipo_nf', label: 'Tipo NF', visible: false, order: 16 },
+    { key: 'nfe', label: 'NF-e', visible: false, order: 17 },
+  ]
+  const [columns, setColumns] = useState(() => {
+    const saved = localStorage.getItem('romaneios_columns')
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
+  })
 
   const load = () => {
     setLoading(true)
@@ -349,13 +377,81 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
     ? motoristasList.filter((m: any) => m.transportador_id === form.transportadora_id)
     : motoristasList
 
+  // Configuração de colunas
+  const saveColumns = (cols: typeof columns) => {
+    setColumns(cols)
+    localStorage.setItem('romaneios_columns', JSON.stringify(cols))
+  }
+  const toggleColumn = (key: string) => {
+    const updated = columns.map((c: any) => c.key === key ? { ...c, visible: !c.visible } : c)
+    saveColumns(updated)
+  }
+  const setColumnOrder = (key: string, order: number) => {
+    const updated = columns.map((c: any) => c.key === key ? { ...c, order } : c)
+    saveColumns(updated)
+  }
+
+  // Obter valor de célula da tabela
+  const getCellValue = (item: any, colKey: string) => {
+    switch (colKey) {
+      case 'operacao': return operacoes.find(o => o.id === item.operacao_id)?.nome || '-'
+      case 'ordem': return item.ordem_nome || '-'
+      case 'data_saida': return item.data_saida_origem || item.data_emissao || '-'
+      case 'produtor': return item.produtor_id ? cadNome(item.produtor_id) : item.produtor || '-'
+      case 'produto': return item.produto_id ? prodNome(item.produto_id) : item.produto || '-'
+      case 'origem': return item.origem_id ? cadNome(item.origem_id) : '-'
+      case 'destino': return item.destinatario_id ? cadNome(item.destinatario_id) : '-'
+      case 'placa': return item.veiculo_id ? veicPlaca(item.veiculo_id) : item.placa || '-'
+      case 'ticket': return item.numero_ticket || '-'
+      case 'peso_liq_sdesc': return item.peso_liquido ? fmtNum(item.peso_liquido) : '-'
+      case 'peso_liq_cdesc': return item.peso_corrigido ? fmtNum(item.peso_corrigido) : '-'
+      case 'motorista': return item.motorista_id ? cadNome(item.motorista_id) : '-'
+      case 'transportadora': return item.transportadora_id ? cadNome(item.transportadora_id) : '-'
+      case 'ano_safra': return anosSafra.find(a => a.id === item.ano_safra_id)?.nome || '-'
+      case 'tipo_ticket': return tiposTicket.find(t => t.id === item.tipo_ticket_id)?.nome || '-'
+      case 'tipo_nf': return tiposNf.find(t => t.id === item.tipo_nf_id)?.nome || '-'
+      case 'nfe': return item.nfe_numero || '-'
+      default: return '-'
+    }
+  }
+
+  // Filtro de busca
+  const filteredItems = items.filter(item => {
+    if (!searchTerm) return true
+    const term = searchTerm.toLowerCase()
+    return (
+      (item.ordem_nome || '').toLowerCase().includes(term) ||
+      (item.numero_ticket || '').toLowerCase().includes(term) ||
+      (item.produtor_id ? cadNome(item.produtor_id) : item.produtor || '').toLowerCase().includes(term) ||
+      (item.produto_id ? prodNome(item.produto_id) : item.produto || '').toLowerCase().includes(term) ||
+      (item.veiculo_id ? veicPlaca(item.veiculo_id) : item.placa || '').toLowerCase().includes(term)
+    )
+  })
+
+  // Colunas visíveis ordenadas
+  const visibleColumns = columns.filter((c: any) => c.visible).sort((a: any, b: any) => a.order - b.order)
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Romaneios</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Romaneio
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowColumnConfig(true)} className="flex items-center gap-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm">
+            <Settings className="w-4 h-4" /> Colunas
+          </button>
+          <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Romaneio
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-4 flex gap-2">
+        <div className="relative flex-1">
+          <input type="text" placeholder="Buscar por ordem, ticket, produtor, produto, placa..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+          <Filter className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        </div>
       </div>
 
       {loading ? <p className="text-gray-500">Carregando...</p> : (
@@ -363,33 +459,29 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
           <table className="w-full text-sm min-w-[750px]">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Ordem</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Ticket</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Data</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Produtor</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Produto</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Placa</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">P.Líq (kg)</th>
+                {visibleColumns.map((col: any) => (
+                  <th key={col.key} className={`px-4 py-3 font-semibold text-gray-600 ${['peso_liq_sdesc','peso_liq_cdesc'].includes(col.key) ? 'text-right' : 'text-left'}`}>
+                    {col.label}
+                  </th>
+                ))}
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {items.map((item: any) => (
+              {filteredItems.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-xs text-blue-600 font-semibold">{item.ordem_nome || '-'}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{item.numero_ticket || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{item.data_saida_origem || item.data_emissao || '-'}</td>
-                  <td className="px-4 py-3 font-medium">{item.produtor_id ? cadNome(item.produtor_id) : item.produtor || '-'}</td>
-                  <td className="px-4 py-3">{item.produto_id ? prodNome(item.produto_id) : item.produto || '-'}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{item.veiculo_id ? veicPlaca(item.veiculo_id) : item.placa || '-'}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{item.peso_liquido ? fmtNum(item.peso_liquido) : '-'}</td>
+                  {visibleColumns.map((col: any) => (
+                    <td key={col.key} className={`px-4 py-3 ${['peso_liq_sdesc','peso_liq_cdesc'].includes(col.key) ? 'text-right font-semibold' : ''} ${col.key === 'ordem' ? 'text-xs text-blue-600 font-semibold' : ''} ${['placa','ticket'].includes(col.key) ? 'font-mono text-xs' : ''}`}>
+                      {getCellValue(item, col.key)}
+                    </td>
+                  ))}
                   <td className="px-4 py-3 text-right space-x-1">
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhum romaneio cadastrado</td></tr>}
+              {filteredItems.length === 0 && <tr><td colSpan={visibleColumns.length + 1} className="px-4 py-8 text-center text-gray-400">Nenhum romaneio encontrado</td></tr>}
             </tbody>
           </table>
         </div>
@@ -458,9 +550,14 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
                         <span>Imagem indisponível. Anexe novamente para atualizar.</span>
                       </div>
                     ) : (
-                      <img src={imagePreview} alt="Romaneio"
-                        onError={() => setImageError(true)}
-                        className="max-h-48 rounded-lg border shadow-sm object-contain" />
+                      <div className="relative group cursor-pointer" onClick={() => setLightboxImage(imagePreview)}>
+                        <img src={imagePreview} alt="Romaneio"
+                          onError={() => setImageError(true)}
+                          className="max-h-48 rounded-lg border shadow-sm object-contain" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center rounded-lg">
+                          <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -689,6 +786,54 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
             <div className="flex justify-end gap-2 p-4 border-t">
               <button onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
               <button onClick={save} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox imagem */}
+      {lightboxImage && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" onClick={() => setLightboxImage(null)}>
+          <button onClick={() => setLightboxImage(null)} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full">
+            <X className="w-6 h-6 text-white" />
+          </button>
+          <img src={lightboxImage} alt="Romaneio ampliado" className="max-w-full max-h-full object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Modal configurador de colunas */}
+      {showColumnConfig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Configurações de Colunas</h2>
+              <button onClick={() => setShowColumnConfig(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <p className="text-sm text-gray-600 mb-4">Selecione quais colunas exibir e defina a ordem (1 = primeira coluna):</p>
+              <div className="space-y-3">
+                {columns.map((col: any) => (
+                  <div key={col.key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <input type="checkbox" checked={col.visible} onChange={() => toggleColumn(col.key)}
+                      className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                    <label className="flex-1 font-medium text-gray-700">{col.label}</label>
+                    <input type="number" min="1" max="20" value={col.order}
+                      onChange={e => setColumnOrder(col.key, parseInt(e.target.value) || 1)}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-between gap-2 p-4 border-t">
+              <button onClick={() => { saveColumns(DEFAULT_COLUMNS); toast.success('Colunas restauradas para padrão') }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Restaurar Padrão
+              </button>
+              <button onClick={() => setShowColumnConfig(false)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Fechar
+              </button>
             </div>
           </div>
         </div>
