@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, uploadRomaneioImage } from '../services/api'
+import ViewModal, { Field } from '../components/ViewModal'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 
@@ -76,6 +77,7 @@ export default function Romaneios() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilters, setActiveFilters] = useState<{id: string, field: string, value: string}[]>([])
   const [showFilterOptions, setShowFilterOptions] = useState(false)
+  const [viewingItem, setViewingItem] = useState<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -660,13 +662,13 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
             </thead>
             <tbody className="divide-y">
               {filteredItems.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewingItem(item)}>
                   {visibleColumns.map((col: any) => (
                     <td key={col.key} className={`px-4 py-3 ${['peso_liq_sdesc','peso_liq_cdesc'].includes(col.key) ? 'text-right font-semibold' : ''} ${col.key === 'ordem' ? 'text-xs text-blue-600 font-semibold' : ''} ${['placa','ticket'].includes(col.key) ? 'font-mono text-xs' : ''}`}>
                       {getCellValue(item, col.key)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>
@@ -987,6 +989,47 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
           </div>
         </div>
       )}
+
+      {/* Modal de Visualização */}
+      <ViewModal
+        title="Detalhes do Romaneio"
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={() => { openEdit(viewingItem); setViewingItem(null) }}
+      >
+        {viewingItem && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="Operação" value={operacoes.find(o => o.id === viewingItem.operacao_id)?.nome} />
+            <Field label="Ordem Carregamento" value={viewingItem.ordem_nome} />
+            <Field label="Ticket" value={viewingItem.numero_ticket} />
+            <Field label="Tipo Ticket" value={tiposTicket.find(t => t.id === viewingItem.tipo_ticket_id)?.nome} />
+            <Field label="NF-e" value={viewingItem.nfe_numero} />
+            <Field label="Tipo NF" value={tiposNf.find(t => t.id === viewingItem.tipo_nf_id)?.nome} />
+            <Field label="Data Saída Origem" value={viewingItem.data_saida_origem} />
+            <Field label="Data Entrada Destino" value={viewingItem.data_entrada_destino} />
+            <Field label="Origem" value={viewingItem.origem_id ? cadNome(viewingItem.origem_id) : '-'} />
+            <Field label="Destino" value={viewingItem.destinatario_id ? cadNome(viewingItem.destinatario_id) : '-'} />
+            <Field label="Produtor" value={viewingItem.produtor_id ? cadNome(viewingItem.produtor_id) : viewingItem.produtor} />
+            <Field label="CNPJ/CPF" value={viewingItem.cnpj_cpf} />
+            <Field label="Produto" value={viewingItem.produto_id ? prodNome(viewingItem.produto_id) : viewingItem.produto} />
+            <Field label="Ano Safra" value={anosSafra.find(a => a.id === viewingItem.ano_safra_id)?.nome} />
+            <Field label="Placa" value={viewingItem.veiculo_id ? veicPlaca(viewingItem.veiculo_id) : viewingItem.placa} />
+            <Field label="Motorista" value={viewingItem.motorista_id ? cadNome(viewingItem.motorista_id) : '-'} />
+            <Field label="Transportadora" value={viewingItem.transportadora_id ? cadNome(viewingItem.transportadora_id) : '-'} />
+            <Field label="Transgenia" value={viewingItem.transgenia} />
+            <Field label="Peso Bruto (kg)" value={viewingItem.peso_bruto ? fmtNum(viewingItem.peso_bruto) : '-'} />
+            <Field label="Tara (kg)" value={viewingItem.tara ? fmtNum(viewingItem.tara) : '-'} />
+            <Field label="Peso Líquido (kg)" value={viewingItem.peso_liquido ? fmtNum(viewingItem.peso_liquido) : '-'} />
+            <Field label="Peso Corrigido (kg)" value={viewingItem.peso_corrigido ? fmtNum(viewingItem.peso_corrigido) : '-'} />
+            <Field label="Umidade %" value={viewingItem.umidade_perc ? fmtPerc(viewingItem.umidade_perc) : '-'} />
+            <Field label="Impureza %" value={viewingItem.impureza_perc ? fmtPerc(viewingItem.impureza_perc) : '-'} />
+            <Field label="Avariados %" value={viewingItem.avariados_perc ? fmtPerc(viewingItem.avariados_perc) : '-'} />
+            <Field label="Ardidos %" value={viewingItem.ardidos_perc ? fmtPerc(viewingItem.ardidos_perc) : '-'} />
+            <Field label="Desc. Total (kg)" value={viewingItem.desconto_kg ? fmtNum(viewingItem.desconto_kg) : '-'} />
+            <Field label="Observações" value={viewingItem.observacoes} full />
+          </dl>
+        )}
+      </ViewModal>
 
       {/* Lightbox imagem */}
       {lightboxImage && (

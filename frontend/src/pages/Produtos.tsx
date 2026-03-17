@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Filter, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getProdutos, createProduto, updateProduto, deleteProduto } from '../services/api'
+import ViewModal, { Field } from '../components/ViewModal'
 
 const TIPOS = ['Grao', 'Insumo']
 const UNIDADES = ['ton', 'kg', 'sc', 'l']
@@ -16,6 +17,7 @@ export default function Produtos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilters, setActiveFilters] = useState<{id: string, field: string, value: string}[]>([])
   const [showFilterOptions, setShowFilterOptions] = useState(false)
+  const [viewingItem, setViewingItem] = useState<any>(null)
 
   const load = () => { setLoading(true); getProdutos().then(setItems).catch(() => toast.error('Erro ao carregar')).finally(() => setLoading(false)) }
   useEffect(() => { load() }, [])
@@ -163,12 +165,12 @@ export default function Produtos() {
             </thead>
             <tbody className="divide-y">
               {filteredItems.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewingItem(item)}>
                   <td className="px-4 py-3 font-medium">{item.nome}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.tipo === 'Grao' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{item.tipo === 'Grao' ? 'Grao' : 'Insumo'}</span></td>
                   <td className="px-4 py-3 text-gray-600">{item.unidade_medida}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{item.ativo ? 'Ativo' : 'Inativo'}</span></td>
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>
@@ -221,6 +223,24 @@ export default function Produtos() {
           </div>
         </div>
       )}
+
+      {/* Modal de Visualização */}
+      <ViewModal
+        title="Detalhes do Produto"
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={() => { openEdit(viewingItem); setViewingItem(null) }}
+      >
+        {viewingItem && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="Nome" value={viewingItem.nome} />
+            <Field label="Tipo" value={viewingItem.tipo} />
+            <Field label="Unidade de Medida" value={viewingItem.unidade_medida} />
+            <Field label="Status" value={viewingItem.ativo ? 'Ativo' : 'Inativo'} />
+            <Field label="Observações" value={viewingItem.observacoes} full />
+          </dl>
+        )}
+      </ViewModal>
     </div>
   )
 }

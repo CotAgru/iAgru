@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, Filter, XCi
 import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
+import ViewModal, { Field } from '../components/ViewModal'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const DEFAULT_CENTER = { lat: -15.7801, lng: -47.9292 }
@@ -122,6 +123,7 @@ export default function Cadastros() {
   const [filtroCidade, setFiltroCidade] = useState('')
   const [filtroAtivo, setFiltroAtivo] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const [viewingItem, setViewingItem] = useState<any>(null)
 
   const load = () => {
     setLoading(true)
@@ -510,7 +512,7 @@ export default function Cadastros() {
               {filtered.map(item => {
                 const placas = placasPorCadastro(item.id)
                 return (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewingItem(item)}>
                   <td className="px-4 py-3">
                     <div className="font-medium">{item.nome_fantasia || item.nome}</div>
                     {item.nome_fantasia && <div className="text-xs text-gray-400">{item.nome}</div>}
@@ -530,7 +532,7 @@ export default function Cadastros() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{item.telefone1 || '-'}</td>
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1" onClick={e => e.stopPropagation()}>
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                   </td>
@@ -818,6 +820,35 @@ export default function Cadastros() {
           </div>
         </div>
       )}
+
+      {/* Modal de Visualização */}
+      <ViewModal
+        title="Detalhes do Cadastro"
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={() => { openEdit(viewingItem); setViewingItem(null) }}
+      >
+        {viewingItem && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="Nome Fantasia" value={viewingItem.nome_fantasia} />
+            <Field label="Razão Social" value={viewingItem.nome} />
+            <Field label="CPF/CNPJ" value={viewingItem.cpf_cnpj} />
+            <Field label="Telefone 1" value={viewingItem.telefone1} />
+            <Field label="Telefone 2" value={viewingItem.telefone2} />
+            <Field label="UF" value={viewingItem.uf} />
+            <Field label="Cidade" value={viewingItem.cidade} />
+            <Field label="Tipos" value={(viewingItem.tipos || []).join(', ')} />
+            <Field label="Status" value={viewingItem.ativo ? 'Ativo' : 'Inativo'} />
+            <Field label="Latitude" value={viewingItem.latitude} />
+            <Field label="Longitude" value={viewingItem.longitude} />
+            {viewingItem.tipos?.includes('Motorista') && viewingItem.transportador_id && (
+              <Field label="Transportadora" value={items.find(i => i.id === viewingItem.transportador_id)?.nome_fantasia || items.find(i => i.id === viewingItem.transportador_id)?.nome} />
+            )}
+            <Field label="Placas Vinculadas" value={placasPorCadastro(viewingItem.id).join(', ') || 'Nenhuma'} full />
+            <Field label="Observações" value={viewingItem.observacoes} full />
+          </dl>
+        )}
+      </ViewModal>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Filter, FileDown, Loader2, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
+import ViewModal, { Field } from '../components/ViewModal'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const UNIDADES_PRECO = ['R$/ton', 'R$/sc', 'R$/km', 'R$/viagem']
@@ -23,6 +24,7 @@ export default function Precos() {
   const [activeFilters, setActiveFilters] = useState<{id: string, field: string, value: string}[]>([])
   const [showFilterOptions, setShowFilterOptions] = useState(false)
   const [calcDist, setCalcDist] = useState(false)
+  const [viewingItem, setViewingItem] = useState<any>(null)
 
   const load = () => {
     setLoading(true)
@@ -363,14 +365,14 @@ export default function Precos() {
             </thead>
             <tbody className="divide-y">
               {filteredItems.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setViewingItem(item)}>
                   <td className="px-4 py-3 font-medium">{item.origem_nome}</td>
                   <td className="px-4 py-3">{item.destino_nome}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${item.produto_tipo === 'Grao' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{item.produto_nome}</span></td>
                   <td className="px-3 sm:px-4 py-3 text-gray-600 hidden md:table-cell">{item.fornecedor_nome || 'Geral'}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700">{fmtCur(item.valor)} <span className="text-xs text-gray-400 font-normal">{item.unidade_preco}</span></td>
                   <td className="px-4 py-3 text-right text-gray-600">{item.distancia_km ? `${item.distancia_km} km` : '-'}</td>
-                  <td className="px-4 py-3 text-right space-x-1">
+                  <td className="px-4 py-3 text-right space-x-1" onClick={e => e.stopPropagation()}>
                     <button onClick={() => gerarDocumento(item)} title="Gerar documento" className="p-1.5 text-green-600 hover:bg-green-50 rounded"><FileDown className="w-4 h-4" /></button>
                     <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
@@ -446,6 +448,31 @@ export default function Precos() {
           </div>
         </div>
       )}
+
+      {/* Modal de Visualização */}
+      <ViewModal
+        title="Detalhes do Preço Contratado"
+        isOpen={!!viewingItem}
+        onClose={() => setViewingItem(null)}
+        onEdit={() => { openEdit(viewingItem); setViewingItem(null) }}
+      >
+        {viewingItem && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="Origem" value={viewingItem.origem_nome} />
+            <Field label="Destino" value={viewingItem.destino_nome} />
+            <Field label="Produto" value={viewingItem.produto_nome} />
+            <Field label="Tipo Produto" value={viewingItem.produto_tipo} />
+            <Field label="Transportador" value={viewingItem.fornecedor_nome || 'Preço Geral (todos)'} />
+            <Field label="Valor" value={fmtCur(viewingItem.valor)} />
+            <Field label="Unidade de Preço" value={viewingItem.unidade_preco} />
+            <Field label="Distância (km)" value={viewingItem.distancia_km ? `${viewingItem.distancia_km} km` : '-'} />
+            <Field label="Vigência Início" value={viewingItem.vigencia_inicio || '-'} />
+            <Field label="Vigência Fim" value={viewingItem.vigencia_fim || '-'} />
+            <Field label="Status" value={viewingItem.ativo ? 'Ativo' : 'Inativo'} />
+            <Field label="Observações" value={viewingItem.observacoes} full />
+          </dl>
+        )}
+      </ViewModal>
     </div>
   )
 }
