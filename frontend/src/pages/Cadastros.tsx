@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, Filter, XCircle, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
@@ -104,7 +104,6 @@ export default function Cadastros() {
   const [editing, setEditing] = useState<Cadastro | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [busca, setBusca] = useState('')
-  const [filtroTipo, setFiltroTipo] = useState('')
   const [activeFilters, setActiveFilters] = useState<{id: string, field: string, value: string}[]>([])
   const [showFilterOptions, setShowFilterOptions] = useState(false)
 
@@ -119,10 +118,6 @@ export default function Cadastros() {
   const [veiculoForm, setVeiculoForm] = useState(emptyVeiculoForm)
   const [savedMotoristaId, setSavedMotoristaId] = useState<string | null>(null)
   const [allVeiculos, setAllVeiculos] = useState<any[]>([])
-  const [filtroUf, setFiltroUf] = useState('')
-  const [filtroCidade, setFiltroCidade] = useState('')
-  const [filtroAtivo, setFiltroAtivo] = useState<string>('')
-  const [showFilters, setShowFilters] = useState(false)
   const [viewingItem, setViewingItem] = useState<any>(null)
 
   const load = () => {
@@ -308,11 +303,15 @@ export default function Cadastros() {
     catch { toast.error('Erro ao remover') }
   }
 
-  const addFilter = () => setActiveFilters([...activeFilters, {id: Date.now().toString(), field: '', value: ''}])
-  const removeFilter = (id: string) => setActiveFilters(activeFilters.filter(f => f.id !== id))
-  const updateFilter = (id: string, key: 'field' | 'value', val: string) => {
-    setActiveFilters(activeFilters.map(f => f.id === id ? {...f, [key]: val} : f))
+  const addFilter = (field: string) => {
+    setActiveFilters([...activeFilters, {id: Date.now().toString(), field, value: ''}])
+    setShowFilterOptions(false)
   }
+  const removeFilter = (id: string) => setActiveFilters(activeFilters.filter(f => f.id !== id))
+  const updateFilterValue = (id: string, value: string) => {
+    setActiveFilters(activeFilters.map(f => f.id === id ? {...f, value} : f))
+  }
+  const clearAllFilters = () => { setActiveFilters([]); setBusca('') }
 
   const FILTER_FIELDS = [
     {key: 'nome', label: 'Nome', type: 'text'},
@@ -346,9 +345,6 @@ export default function Cadastros() {
   })
 
   const ufsDisponiveis = [...new Set(items.map(i => i.uf))].sort()
-  const cidadesDisponiveis = filtroUf ? [...new Set(items.filter(i => i.uf === filtroUf).map(i => i.cidade))].sort() : []
-  const hasActiveFilters = filtroTipo || filtroUf || filtroCidade || filtroAtivo || busca
-  const clearAllFilters = () => { setFiltroTipo(''); setFiltroUf(''); setFiltroCidade(''); setFiltroAtivo(''); setBusca('') }
 
   const tipoColors: Record<string, string> = {
     Fazenda: 'bg-green-100 text-green-700', Armazem: 'bg-blue-100 text-blue-700',
@@ -366,131 +362,69 @@ export default function Cadastros() {
         </button>
       </div>
 
-      {/* Barra de busca + filtros avançados */}
-      <div className="mb-3">
-        <div className="flex gap-2 items-center mb-2">
-          <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-            <input type="text" placeholder="Buscar por nome, CNPJ, cidade, placa..." value={busca} onChange={e => setBusca(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" />
-          </div>
+      {/* Barra de busca */}
+      <div className="mb-3 flex gap-2 items-center">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+          <input type="text" placeholder="Buscar por nome, CNPJ, cidade, placa..." value={busca} onChange={e => setBusca(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" />
         </div>
-        <div className="relative">
-          <button onClick={() => setShowFilterOptions(!showFilterOptions)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-            <Plus className="w-4 h-4" /> Adicionar Filtro
-            <ChevronDown className="w-3 h-3" />
-          </button>
-        </div>
+      </div>
+
+      {/* Filtros avançados */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {activeFilters.length > 0 && (
-          <div className="mt-2 space-y-2">
+          <>
             {activeFilters.map(filter => {
-              const field = FILTER_FIELDS.find(f => f.key === filter.field)
+              const fieldDef = FILTER_FIELDS.find(f => f.key === filter.field)
               return (
-                <div key={filter.id} className="flex gap-2 items-center bg-gray-50 p-2 rounded-lg">
-                  <select value={filter.field} onChange={e => updateFilter(filter.id, 'field', e.target.value)}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm">
-                    <option value="">Selecione campo...</option>
-                    {FILTER_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                  </select>
-                  {field?.type === 'select' ? (
-                    <select value={filter.value} onChange={e => updateFilter(filter.id, 'value', e.target.value)}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm flex-1">
+                <div key={filter.id} className="flex items-center gap-2 bg-gray-100 rounded-lg p-2 pr-3">
+                  <span className="text-xs font-medium text-gray-600">{fieldDef?.label || filter.field}:</span>
+                  {fieldDef?.type === 'select' ? (
+                    <select value={filter.value} onChange={e => updateFilterValue(filter.id, e.target.value)}
+                      className="text-sm border-0 bg-transparent focus:ring-0 p-0 pr-6">
                       <option value="">Selecione...</option>
-                      {(field.options?.() || []).map((opt: any) => <option key={opt} value={opt}>{opt}</option>)}
+                      {(fieldDef.options?.() || []).map((opt: any) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
                     </select>
                   ) : (
-                    <input type="text" value={filter.value} onChange={e => updateFilter(filter.id, 'value', e.target.value)}
-                      placeholder="Digite o valor..."
-                      className="px-2 py-1 border border-gray-300 rounded text-sm flex-1" />
+                    <input type="text" value={filter.value} onChange={e => updateFilterValue(filter.id, e.target.value)}
+                      placeholder="Digite..." className="text-sm border-0 bg-transparent focus:ring-0 p-0 w-32" />
                   )}
-                  <button onClick={() => removeFilter(filter.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded">
-                    <X className="w-4 h-4" />
+                  <button onClick={() => removeFilter(filter.id)} className="p-1 hover:bg-gray-200 rounded">
+                    <X className="w-3 h-3 text-gray-500" />
                   </button>
                 </div>
               )
             })}
-          </div>
+            <button onClick={clearAllFilters} className="text-xs text-red-600 hover:text-red-700 font-medium px-2">Limpar todos</button>
+          </>
         )}
-        {showFilterOptions && (
-          <div className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px]">
-            {FILTER_FIELDS.map(f => (
-              <button key={f.key} onClick={() => { addFilter(); setShowFilterOptions(false) }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm">
-                {f.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Painel de filtros expansivel */}
-      {showFilters && (
-        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
-          {/* Tipos como chips */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Tipo</label>
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setFiltroTipo('')}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  !filtroTipo ? 'bg-green-600 text-white' : 'bg-white border border-gray-300 text-gray-600 hover:border-green-400'
-                }`}>Todos</button>
-              {TODOS_TIPOS.map(t => (
-                <button key={t} onClick={() => setFiltroTipo(filtroTipo === t ? '' : t)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    filtroTipo === t
-                      ? `${tipoColors[t] || 'bg-gray-600 text-white'} ring-1 ring-offset-1 ring-green-500`
-                      : 'bg-white border border-gray-300 text-gray-600 hover:border-green-400'
-                  }`}>{t}</button>
+        <div className="relative">
+          <button onClick={() => setShowFilterOptions(!showFilterOptions)}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+            <Plus className="w-4 h-4" /> Adicionar Filtro <ChevronDown className="w-4 h-4" />
+          </button>
+          {showFilterOptions && (
+            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto w-64">
+              {FILTER_FIELDS.filter(f => !activeFilters.find(af => af.field === f.key)).map(field => (
+                <button key={field.key} onClick={() => addFilter(field.key)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">{field.label}</button>
               ))}
+              {FILTER_FIELDS.filter(f => !activeFilters.find(af => af.field === f.key)).length === 0 && (
+                <div className="px-4 py-3 text-sm text-gray-500 text-center">Todos os filtros já foram adicionados</div>
+              )}
             </div>
-          </div>
-
-          {/* UF + Cidade + Status */}
-          <div className="flex gap-2 flex-wrap">
-            <div className="min-w-[100px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">UF</label>
-              <select value={filtroUf} onChange={e => { setFiltroUf(e.target.value); setFiltroCidade('') }}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
-                <option value="">Todas</option>
-                {ufsDisponiveis.map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-            {filtroUf && cidadesDisponiveis.length > 0 && (
-              <div className="min-w-[140px] flex-1">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Cidade</label>
-                <select value={filtroCidade} onChange={e => setFiltroCidade(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
-                  <option value="">Todas</option>
-                  {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="min-w-[100px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-              <select value={filtroAtivo} onChange={e => setFiltroAtivo(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
-                <option value="">Todos</option>
-                <option value="ativo">Ativos</option>
-                <option value="inativo">Inativos</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Limpar filtros */}
-          {hasActiveFilters && (
-            <button onClick={clearAllFilters} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700">
-              <XCircle className="w-3.5 h-3.5" /> Limpar todos os filtros
-            </button>
           )}
         </div>
-      )}
+      </div>
 
       {/* Contador de resultados */}
       <div className="mb-2 text-xs text-gray-400 flex items-center gap-2">
         <span>{filtered.length} de {items.length} cadastros</span>
-        {hasActiveFilters && <span className="text-green-600 font-medium">(filtrado)</span>}
+        {(activeFilters.length > 0 || busca) && <span className="text-green-600 font-medium">(filtrado)</span>}
       </div>
 
       {/* Tabela */}

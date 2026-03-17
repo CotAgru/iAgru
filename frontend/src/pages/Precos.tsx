@@ -175,30 +175,24 @@ export default function Precos() {
     const origem = allCadastros.find((c: any) => c.id === item.origem_id)
     const destino = allCadastros.find((c: any) => c.id === item.destino_id)
 
-    // Mapa estatico com trajeto
+    // Mapa com rota real usando Google Maps Embed API (modo directions)
     let mapaHtml = ''
     if (GOOGLE_MAPS_API_KEY) {
-      const origemMarker = origem?.latitude && origem?.longitude
+      const origemQuery = origem?.latitude && origem?.longitude
         ? `${origem.latitude},${origem.longitude}`
         : `${origem?.cidade || ''},${origem?.uf || ''},Brasil`
-      const destinoMarker = destino?.latitude && destino?.longitude
+      const destinoQuery = destino?.latitude && destino?.longitude
         ? `${destino.latitude},${destino.longitude}`
         : `${destino?.cidade || ''},${destino?.uf || ''},Brasil`
-      const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=760x300&maptype=roadmap`
-        + `&markers=color:green%7Clabel:A%7C${encodeURIComponent(origemMarker)}`
-        + `&markers=color:red%7Clabel:B%7C${encodeURIComponent(destinoMarker)}`
-        + `&path=enc:&sensor=false`
-        + `&key=${GOOGLE_MAPS_API_KEY}`
-      const dirMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=760x300&maptype=roadmap`
-        + `&markers=color:0x16a34a%7Clabel:A%7C${encodeURIComponent(origemMarker)}`
-        + `&markers=color:0xdc2626%7Clabel:B%7C${encodeURIComponent(destinoMarker)}`
-        + `&path=color:0x2563eb%7Cweight:4%7C${encodeURIComponent(origemMarker)}%7C${encodeURIComponent(destinoMarker)}`
-        + `&key=${GOOGLE_MAPS_API_KEY}`
+      const embedUrl = `https://www.google.com/maps/embed/v1/directions?key=${GOOGLE_MAPS_API_KEY}`
+        + `&origin=${encodeURIComponent(origemQuery)}`
+        + `&destination=${encodeURIComponent(destinoQuery)}`
+        + `&mode=driving`
       mapaHtml = `
       <div class="section">
-        <h2>Mapa do Trajeto</h2>
+        <h2>Mapa do Trajeto (Rota Rodoviária)</h2>
         <div style="text-align:center;border-radius:10px;overflow:hidden;border:1px solid #ddd">
-          <img src="${dirMapUrl}" alt="Mapa do trajeto" style="width:100%;max-width:760px;display:block;margin:0 auto" />
+          <iframe src="${embedUrl}" width="760" height="350" style="border:0;width:100%;max-width:760px;display:block;margin:0 auto" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
         <div style="display:flex;justify-content:center;gap:20px;margin-top:8px;font-size:12px;color:#666">
           <span><span style="color:#16a34a;font-weight:bold">A</span> = Origem</span>
