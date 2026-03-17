@@ -133,6 +133,19 @@ export const updateTipoTicket = async (id: string, data: any) =>
 export const deleteTipoTicket = async (id: string) =>
   throwIfError(await supabase.from('tipos_ticket').delete().eq('id', id))
 
+// === TIPOS CAMINHAO ===
+export const getTiposCaminhao = async () =>
+  throwIfError(await supabase.from('tipos_caminhao').select('*').order('nome'))
+
+export const createTipoCaminhao = async (data: any) =>
+  throwIfError(await supabase.from('tipos_caminhao').insert(data).select().single())
+
+export const updateTipoCaminhao = async (id: string, data: any) =>
+  throwIfError(await supabase.from('tipos_caminhao').update(data).eq('id', id).select().single())
+
+export const deleteTipoCaminhao = async (id: string) =>
+  throwIfError(await supabase.from('tipos_caminhao').delete().eq('id', id))
+
 // === OPERACOES ===
 export const getOperacoes = async () => {
   const { data, error } = await supabase

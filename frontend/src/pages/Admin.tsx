@@ -5,14 +5,16 @@ import {
   getAnosSafra, createAnoSafra, updateAnoSafra, deleteAnoSafra,
   getTiposNf, createTipoNf, updateTipoNf, deleteTipoNf,
   getTiposTicket, createTipoTicket, updateTipoTicket, deleteTipoTicket,
+  getTiposCaminhao, createTipoCaminhao, updateTipoCaminhao, deleteTipoCaminhao,
 } from '../services/api'
 
-type Tab = 'ano_safra' | 'tipos_nf' | 'tipos_ticket'
+type Tab = 'ano_safra' | 'tipos_nf' | 'tipos_ticket' | 'tipos_caminhao'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'ano_safra', label: 'Ano Safra' },
   { key: 'tipos_nf', label: 'Tipo NF' },
   { key: 'tipos_ticket', label: 'Tipo Ticket' },
+  { key: 'tipos_caminhao', label: 'Tipo Caminhão' },
 ]
 
 function SimpleTable({
@@ -67,6 +69,7 @@ export default function Admin() {
   const [anosSafra, setAnosSafra] = useState<any[]>([])
   const [tiposNf, setTiposNf] = useState<any[]>([])
   const [tiposTicket, setTiposTicket] = useState<any[]>([])
+  const [tiposCaminhao, setTiposCaminhao] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
@@ -77,8 +80,8 @@ export default function Admin() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getAnosSafra(), getTiposNf(), getTiposTicket()])
-      .then(([as, tn, tt]) => { setAnosSafra(as); setTiposNf(tn); setTiposTicket(tt) })
+    Promise.all([getAnosSafra(), getTiposNf(), getTiposTicket(), getTiposCaminhao()])
+      .then(([as, tn, tt, tc]) => { setAnosSafra(as); setTiposNf(tn); setTiposTicket(tt); setTiposCaminhao(tc) })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
   }
@@ -98,9 +101,12 @@ export default function Admin() {
       } else if (tab === 'tipos_nf') {
         if (editing) await updateTipoNf(editing.id, payload)
         else await createTipoNf(payload)
-      } else {
+      } else if (tab === 'tipos_ticket') {
         if (editing) await updateTipoTicket(editing.id, payload)
         else await createTipoTicket(payload)
+      } else {
+        if (editing) await updateTipoCaminhao(editing.id, payload)
+        else await createTipoCaminhao(payload)
       }
       toast.success(editing ? 'Atualizado!' : 'Criado!')
       setShowForm(false); load()
@@ -113,12 +119,13 @@ export default function Admin() {
     try {
       if (tab === 'ano_safra') await deleteAnoSafra(id)
       else if (tab === 'tipos_nf') await deleteTipoNf(id)
-      else await deleteTipoTicket(id)
+      else if (tab === 'tipos_ticket') await deleteTipoTicket(id)
+      else await deleteTipoCaminhao(id)
       toast.success('Removido!'); load()
     } catch { toast.error('Erro ao remover') }
   }
 
-  const currentItems = tab === 'ano_safra' ? anosSafra : tab === 'tipos_nf' ? tiposNf : tiposTicket
+  const currentItems = tab === 'ano_safra' ? anosSafra : tab === 'tipos_nf' ? tiposNf : tab === 'tipos_ticket' ? tiposTicket : tiposCaminhao
   const currentLabel = TABS.find(t => t.key === tab)?.label || ''
 
   return (

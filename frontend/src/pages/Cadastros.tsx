@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, Filter, XCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, Filter, XCircle, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
@@ -104,6 +104,8 @@ export default function Cadastros() {
   const [form, setForm] = useState(emptyForm)
   const [busca, setBusca] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [activeFilters, setActiveFilters] = useState<{id: string, field: string, value: string}[]>([])
+  const [showFilterOptions, setShowFilterOptions] = useState(false)
 
   const [ufs, setUfs] = useState<UF[]>([])
   const [cidades, setCidades] = useState<Cidade[]>([])
@@ -304,12 +306,36 @@ export default function Cadastros() {
     catch { toast.error('Erro ao remover') }
   }
 
+  const addFilter = () => setActiveFilters([...activeFilters, {id: Date.now().toString(), field: '', value: ''}])
+  const removeFilter = (id: string) => setActiveFilters(activeFilters.filter(f => f.id !== id))
+  const updateFilter = (id: string, key: 'field' | 'value', val: string) => {
+    setActiveFilters(activeFilters.map(f => f.id === id ? {...f, [key]: val} : f))
+  }
+
+  const FILTER_FIELDS = [
+    {key: 'nome', label: 'Nome', type: 'text'},
+    {key: 'cpf_cnpj', label: 'CPF/CNPJ', type: 'text'},
+    {key: 'uf', label: 'UF', type: 'select', options: () => ufsDisponiveis},
+    {key: 'cidade', label: 'Cidade', type: 'text'},
+    {key: 'tipo', label: 'Tipo', type: 'select', options: () => TODOS_TIPOS},
+    {key: 'ativo', label: 'Ativo', type: 'select', options: () => ['Sim', 'Não']},
+  ]
+
   const filtered = items.filter(i => {
-    if (filtroTipo && !(i.tipos || []).includes(filtroTipo)) return false
-    if (filtroUf && i.uf !== filtroUf) return false
-    if (filtroCidade && i.cidade !== filtroCidade) return false
-    if (filtroAtivo === 'ativo' && !i.ativo) return false
-    if (filtroAtivo === 'inativo' && i.ativo) return false
+    // Filtros avançados
+    for (const filter of activeFilters) {
+      if (!filter.field || !filter.value) continue
+      if (filter.field === 'nome' && !i.nome?.toLowerCase().includes(filter.value.toLowerCase())) return false
+      if (filter.field === 'cpf_cnpj' && !i.cpf_cnpj?.toLowerCase().includes(filter.value.toLowerCase())) return false
+      if (filter.field === 'uf' && i.uf !== filter.value) return false
+      if (filter.field === 'cidade' && !i.cidade?.toLowerCase().includes(filter.value.toLowerCase())) return false
+      if (filter.field === 'tipo' && !(i.tipos || []).includes(filter.value)) return false
+      if (filter.field === 'ativo') {
+        if (filter.value === 'Sim' && !i.ativo) return false
+        if (filter.value === 'Não' && i.ativo) return false
+      }
+    }
+    // Busca geral
     if (!busca) return true
     const term = busca.toLowerCase()
     return i.nome?.toLowerCase().includes(term) || i.nome_fantasia?.toLowerCase().includes(term) ||
@@ -338,22 +364,63 @@ export default function Cadastros() {
         </button>
       </div>
 
-      {/* Barra de busca + botao filtros */}
-      <div className="mb-3 flex gap-2 items-center">
-        <div className="relative flex-1 min-w-0">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-          <input type="text" placeholder="Buscar nome, CNPJ, cidade, placa..." value={busca} onChange={e => setBusca(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" />
+      {/* Barra de busca + filtros avançados */}
+      <div className="mb-3">
+        <div className="flex gap-2 items-center mb-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+            <input type="text" placeholder="Buscar por nome, CNPJ, cidade, placa..." value={busca} onChange={e => setBusca(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" />
+          </div>
         </div>
-        <button onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
-            showFilters || hasActiveFilters ? 'bg-green-50 border-green-400 text-green-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-          }`}>
-          <Filter className="w-4 h-4" /> Filtros
-          {hasActiveFilters && <span className="bg-green-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-            {[filtroTipo, filtroUf, filtroCidade, filtroAtivo].filter(Boolean).length}
-          </span>}
-        </button>
+        <div className="relative">
+          <button onClick={() => setShowFilterOptions(!showFilterOptions)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+            <Plus className="w-4 h-4" /> Adicionar Filtro
+            <ChevronDown className="w-3 h-3" />
+          </button>
+        </div>
+        {activeFilters.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {activeFilters.map(filter => {
+              const field = FILTER_FIELDS.find(f => f.key === filter.field)
+              return (
+                <div key={filter.id} className="flex gap-2 items-center bg-gray-50 p-2 rounded-lg">
+                  <select value={filter.field} onChange={e => updateFilter(filter.id, 'field', e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm">
+                    <option value="">Selecione campo...</option>
+                    {FILTER_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                  </select>
+                  {field?.type === 'select' ? (
+                    <select value={filter.value} onChange={e => updateFilter(filter.id, 'value', e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm flex-1">
+                      <option value="">Selecione...</option>
+                      {(field.options?.() || []).map((opt: any) => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : (
+                    <input type="text" value={filter.value} onChange={e => updateFilter(filter.id, 'value', e.target.value)}
+                      placeholder="Digite o valor..."
+                      className="px-2 py-1 border border-gray-300 rounded text-sm flex-1" />
+                  )}
+                  <button onClick={() => removeFilter(filter.id)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {showFilterOptions && (
+          <div className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px]">
+            {FILTER_FIELDS.map(f => (
+              <button key={f.key} onClick={() => { addFilter(); setShowFilterOptions(false) }}
+                className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded text-sm">
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Painel de filtros expansivel */}
