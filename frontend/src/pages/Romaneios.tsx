@@ -5,19 +5,42 @@ import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 
-// Formatação numérica: 14.000 / 1.000
-const fmtNum = (v: string | number | null) => {
+// Formatação kg: 45000 → "45.000" (separador milhar com ponto)
+const fmtKg = (v: string | number | null | undefined): string => {
   if (v === null || v === undefined || v === '') return ''
-  const n = typeof v === 'string' ? parseFloat(v) : v
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'))
   if (isNaN(n)) return ''
-  return n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+  return Math.round(n).toLocaleString('pt-BR')
 }
-// Parse de string formatada para number string
-const parseNum = (v: string) => v.replace(/\./g, '').replace(',', '.')
+// Parse kg formatado → number: "45.000" → 45000
+const parseKg = (v: string): number | null => {
+  if (!v) return null
+  const n = parseInt(v.replace(/\./g, ''), 10)
+  return isNaN(n) ? null : n
+}
+// Formatação percentual: 12.5 → "12,50" (decimal com vírgula)
+const fmtPerc = (v: string | number | null | undefined): string => {
+  if (v === null || v === undefined || v === '') return ''
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'))
+  if (isNaN(n)) return ''
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+// Parse percentual → number: "12,50" → 12.5
+const parsePerc = (v: string): number | null => {
+  if (!v) return null
+  const n = parseFloat(v.replace(/\./g, '').replace(',', '.'))
+  return isNaN(n) ? null : n
+}
+// Para exibição na tabela (genérico)
+const fmtNum = fmtKg
+
+const KG_FIELDS = ['peso_bruto','tara','peso_liquido','desconto_kg','peso_corrigido','umidade_desc','impureza_desc','avariados_desc','ardidos_desc','esverdeados_desc','partidos_desc','quebrados_desc']
+const PERC_FIELDS = ['umidade_perc','impureza_perc','avariados_perc','ardidos_perc','esverdeados_perc','partidos_perc','quebrados_perc']
 
 const emptyForm = {
   operacao_id: '', ordem_id: '',
-  numero_ticket: '', tipo_ticket_id: '', nfe_numero: '', tipo_nf_id: '', data_emissao: '',
+  numero_ticket: '', tipo_ticket_id: '', nfe_numero: '', tipo_nf_id: '',
+  data_saida_origem: '', data_entrada_destino: '', data_saida_destino: '',
   origem_id: '', destinatario_id: '', produtor_id: '', cnpj_cpf: '',
   produto_id: '', veiculo_id: '', motorista_id: '', transportadora_id: '', ano_safra_id: '',
   peso_bruto: '', tara: '', peso_liquido: '',
@@ -75,23 +98,25 @@ export default function Romaneios() {
       operacao_id: item.operacao_id || '', ordem_id: item.ordem_id || '',
       numero_ticket: item.numero_ticket || '', tipo_ticket_id: item.tipo_ticket_id || '',
       nfe_numero: item.nfe_numero || '', tipo_nf_id: item.tipo_nf_id || '',
-      data_emissao: item.data_emissao || '',
+      data_saida_origem: item.data_saida_origem || item.data_emissao || '',
+      data_entrada_destino: item.data_entrada_destino || '',
+      data_saida_destino: item.data_saida_destino || '',
       origem_id: item.origem_id || '', destinatario_id: item.destinatario_id || '',
       produtor_id: item.produtor_id || '', cnpj_cpf: item.cnpj_cpf || '',
       produto_id: item.produto_id || '', veiculo_id: item.veiculo_id || '',
       motorista_id: item.motorista_id || '', transportadora_id: item.transportadora_id || '',
       ano_safra_id: item.ano_safra_id || '',
-      peso_bruto: item.peso_bruto?.toString() || '', tara: item.tara?.toString() || '',
-      peso_liquido: item.peso_liquido?.toString() || '',
-      umidade_perc: item.umidade_perc?.toString() || '', impureza_perc: item.impureza_perc?.toString() || '',
-      avariados_perc: item.avariados_perc?.toString() || '', ardidos_perc: item.ardidos_perc?.toString() || '',
-      esverdeados_perc: item.esverdeados_perc?.toString() || '', partidos_perc: item.partidos_perc?.toString() || '',
-      quebrados_perc: item.quebrados_perc?.toString() || '',
-      umidade_desc: item.umidade_desc?.toString() || '', impureza_desc: item.impureza_desc?.toString() || '',
-      avariados_desc: item.avariados_desc?.toString() || '', ardidos_desc: item.ardidos_desc?.toString() || '',
-      esverdeados_desc: item.esverdeados_desc?.toString() || '', partidos_desc: item.partidos_desc?.toString() || '',
-      quebrados_desc: item.quebrados_desc?.toString() || '',
-      desconto_kg: item.desconto_kg?.toString() || '', peso_corrigido: item.peso_corrigido?.toString() || '',
+      peso_bruto: fmtKg(item.peso_bruto), tara: fmtKg(item.tara),
+      peso_liquido: fmtKg(item.peso_liquido),
+      umidade_perc: fmtPerc(item.umidade_perc), impureza_perc: fmtPerc(item.impureza_perc),
+      avariados_perc: fmtPerc(item.avariados_perc), ardidos_perc: fmtPerc(item.ardidos_perc),
+      esverdeados_perc: fmtPerc(item.esverdeados_perc), partidos_perc: fmtPerc(item.partidos_perc),
+      quebrados_perc: fmtPerc(item.quebrados_perc),
+      umidade_desc: fmtKg(item.umidade_desc), impureza_desc: fmtKg(item.impureza_desc),
+      avariados_desc: fmtKg(item.avariados_desc), ardidos_desc: fmtKg(item.ardidos_desc),
+      esverdeados_desc: fmtKg(item.esverdeados_desc), partidos_desc: fmtKg(item.partidos_desc),
+      quebrados_desc: fmtKg(item.quebrados_desc),
+      desconto_kg: fmtKg(item.desconto_kg), peso_corrigido: fmtKg(item.peso_corrigido),
       transgenia: item.transgenia || '', observacoes: item.observacoes || '', ativo: item.ativo,
     })
     setImagePreview(item.imagem_url || null)
@@ -152,21 +177,48 @@ export default function Romaneios() {
     setForm(prev => ({ ...prev, ...updates }))
   }
 
-  // Cálculo automático descontos
+  // Cálculo automático descontos (valores vêm formatados como "1.200")
   const calcDescontoTotal = (f: typeof form) => {
     const descs = [f.umidade_desc, f.impureza_desc, f.avariados_desc, f.ardidos_desc, f.esverdeados_desc, f.partidos_desc, f.quebrados_desc]
-    return descs.reduce((sum, d) => sum + (d ? parseFloat(d) || 0 : 0), 0)
+    return descs.reduce((sum, d) => sum + (parseKg(d) || 0), 0)
   }
-  const calcPesoCorrigido = (f: typeof form) => {
-    const pl = parseFloat(f.peso_liquido) || 0
-    const dt = calcDescontoTotal(f)
-    return pl > 0 ? (pl - dt) : 0
+
+  // Handler para campos kg: formata com separador de milhar e recalcula dependentes
+  const handleKgChange = (field: string, raw: string) => {
+    const digits = raw.replace(/\D/g, '')
+    const formatted = digits ? parseInt(digits, 10).toLocaleString('pt-BR') : ''
+    const next = { ...form, [field]: formatted }
+    // Auto-calc peso_liquido = peso_bruto - tara
+    if (field === 'peso_bruto' || field === 'tara') {
+      const pb = parseKg(field === 'peso_bruto' ? formatted : next.peso_bruto) || 0
+      const ta = parseKg(field === 'tara' ? formatted : next.tara) || 0
+      const pl = pb > 0 && ta > 0 ? pb - ta : 0
+      next.peso_liquido = pl > 0 ? fmtKg(pl) : ''
+      // Recalcular peso corrigido
+      const dt = calcDescontoTotal(next)
+      next.peso_corrigido = pl > 0 ? fmtKg(pl - dt) : ''
+    }
+    setForm(next)
   }
-  const updateDescField = (field: string, value: string) => {
-    const next = { ...form, [field]: value }
+
+  // Handler para campos desc (kg) com recálculo de desconto total e peso corrigido
+  const handleDescChange = (field: string, raw: string) => {
+    const digits = raw.replace(/\D/g, '')
+    const formatted = digits ? parseInt(digits, 10).toLocaleString('pt-BR') : ''
+    const next = { ...form, [field]: formatted }
     const dt = calcDescontoTotal(next)
-    const pc = parseFloat(next.peso_liquido) || 0
-    setForm({ ...next, desconto_kg: dt > 0 ? dt.toString() : '', peso_corrigido: pc > 0 ? (pc - dt).toString() : '' })
+    const pl = parseKg(next.peso_liquido) || 0
+    next.desconto_kg = dt > 0 ? fmtKg(dt) : ''
+    next.peso_corrigido = pl > 0 ? fmtKg(pl - dt) : ''
+    setForm(next)
+  }
+
+  // Handler para campos percentuais: permite dígitos e vírgula
+  const handlePercChange = (field: string, raw: string) => {
+    let clean = raw.replace(/[^\d,]/g, '')
+    const parts = clean.split(',')
+    if (parts.length > 2) clean = parts[0] + ',' + parts.slice(1).join('')
+    setForm(prev => ({ ...prev, [field]: clean }))
   }
 
   const handleImageSelect = async (file: File) => {
@@ -189,7 +241,7 @@ export default function Romaneios() {
 Extraia os seguintes campos e retorne APENAS um JSON válido (sem markdown, sem comentários):
 {
   "numero_ticket": "",
-  "data_emissao": "YYYY-MM-DD",
+  "data_saida_origem": "YYYY-MM-DD",
   "cnpj_cpf": "",
   "nfe_numero": "",
   "peso_bruto": 0,
@@ -220,21 +272,21 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
         setForm(prev => ({
           ...prev,
           numero_ticket: p.numero_ticket || prev.numero_ticket,
-          data_emissao: p.data_emissao || prev.data_emissao,
+          data_saida_origem: p.data_saida_origem || prev.data_saida_origem,
           cnpj_cpf: p.cnpj_cpf || prev.cnpj_cpf,
           nfe_numero: p.nfe_numero || prev.nfe_numero,
-          peso_bruto: p.peso_bruto ? p.peso_bruto.toString() : prev.peso_bruto,
-          tara: p.tara ? p.tara.toString() : prev.tara,
-          peso_liquido: p.peso_liquido ? p.peso_liquido.toString() : prev.peso_liquido,
-          umidade_perc: p.umidade_perc ? p.umidade_perc.toString() : prev.umidade_perc,
-          impureza_perc: p.impureza_perc ? p.impureza_perc.toString() : prev.impureza_perc,
-          avariados_perc: p.avariados_perc ? p.avariados_perc.toString() : prev.avariados_perc,
-          ardidos_perc: p.ardidos_perc ? p.ardidos_perc.toString() : prev.ardidos_perc,
-          esverdeados_perc: p.esverdeados_perc ? p.esverdeados_perc.toString() : prev.esverdeados_perc,
-          partidos_perc: p.partidos_perc ? p.partidos_perc.toString() : prev.partidos_perc,
-          quebrados_perc: p.quebrados_perc ? p.quebrados_perc.toString() : prev.quebrados_perc,
-          desconto_kg: p.desconto_kg ? p.desconto_kg.toString() : prev.desconto_kg,
-          peso_corrigido: p.peso_corrigido ? p.peso_corrigido.toString() : prev.peso_corrigido,
+          peso_bruto: p.peso_bruto ? fmtKg(p.peso_bruto) : prev.peso_bruto,
+          tara: p.tara ? fmtKg(p.tara) : prev.tara,
+          peso_liquido: p.peso_liquido ? fmtKg(p.peso_liquido) : prev.peso_liquido,
+          umidade_perc: p.umidade_perc ? fmtPerc(p.umidade_perc) : prev.umidade_perc,
+          impureza_perc: p.impureza_perc ? fmtPerc(p.impureza_perc) : prev.impureza_perc,
+          avariados_perc: p.avariados_perc ? fmtPerc(p.avariados_perc) : prev.avariados_perc,
+          ardidos_perc: p.ardidos_perc ? fmtPerc(p.ardidos_perc) : prev.ardidos_perc,
+          esverdeados_perc: p.esverdeados_perc ? fmtPerc(p.esverdeados_perc) : prev.esverdeados_perc,
+          partidos_perc: p.partidos_perc ? fmtPerc(p.partidos_perc) : prev.partidos_perc,
+          quebrados_perc: p.quebrados_perc ? fmtPerc(p.quebrados_perc) : prev.quebrados_perc,
+          desconto_kg: p.desconto_kg ? fmtKg(p.desconto_kg) : prev.desconto_kg,
+          peso_corrigido: p.peso_corrigido ? fmtKg(p.peso_corrigido) : prev.peso_corrigido,
           transgenia: p.transgenia || prev.transgenia,
         }))
         toast.success('Dados extraídos com IA!')
@@ -245,13 +297,12 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
 
   const ordensFiltradas = form.operacao_id ? ordens.filter((o: any) => o.operacao_id === form.operacao_id) : ordens
 
-  const NUMERIC_FIELDS = ['peso_bruto','tara','peso_liquido','umidade_perc','impureza_perc','avariados_perc','ardidos_perc','esverdeados_perc','partidos_perc','quebrados_perc','desconto_kg','peso_corrigido','umidade_desc','impureza_desc','avariados_desc','ardidos_desc','esverdeados_desc','partidos_desc','quebrados_desc']
-
   const save = async () => {
     if (!form.ordem_id) { toast.error('Selecione uma Ordem de Carregamento'); return }
     const payload: any = {}
     Object.entries(form).forEach(([k, v]) => {
-      if (NUMERIC_FIELDS.includes(k)) { payload[k] = v ? Number(v) : null }
+      if (KG_FIELDS.includes(k)) { payload[k] = parseKg(v as string) }
+      else if (PERC_FIELDS.includes(k)) { payload[k] = parsePerc(v as string) }
       else if (v === '' || v === undefined) { payload[k] = null }
       else { payload[k] = v }
     })
@@ -315,7 +366,7 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-xs text-blue-600 font-semibold">{item.ordem_nome || '-'}</td>
                   <td className="px-4 py-3 font-mono text-xs">{item.numero_ticket || '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{item.data_emissao || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">{item.data_saida_origem || item.data_emissao || '-'}</td>
                   <td className="px-4 py-3 font-medium">{item.produtor_id ? cadNome(item.produtor_id) : item.produtor || '-'}</td>
                   <td className="px-4 py-3">{item.produto_id ? prodNome(item.produto_id) : item.produto || '-'}</td>
                   <td className="px-4 py-3 font-mono text-xs">{item.veiculo_id ? veicPlaca(item.veiculo_id) : item.placa || '-'}</td>
@@ -426,11 +477,6 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Data Emissão</label>
-                  <input type="date" value={form.data_emissao} onChange={e => setForm({...form, data_emissao: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                </div>
-                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Ano Safra</label>
                   <select value={form.ano_safra_id} onChange={e => setForm({...form, ano_safra_id: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50">
@@ -528,26 +574,52 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
               {/* Pesagem */}
               <div className="border-t pt-3">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Pesagem</h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Peso Bruto (kg)</label>
-                    <input type="text" inputMode="decimal" value={form.peso_bruto} onChange={e => setForm({...form, peso_bruto: e.target.value})}
+                    <input type="text" inputMode="numeric" value={form.peso_bruto} onChange={e => handleKgChange('peso_bruto', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Tara (kg)</label>
-                    <input type="text" inputMode="decimal" value={form.tara} onChange={e => setForm({...form, tara: e.target.value})}
+                    <input type="text" inputMode="numeric" value={form.tara} onChange={e => handleKgChange('tara', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Peso Líquido S/Desc (kg)</label>
-                    <input type="text" inputMode="decimal" value={form.peso_liquido} onChange={e => {
-                      const next = {...form, peso_liquido: e.target.value}
-                      const dt = calcDescontoTotal(next)
-                      const pl = parseFloat(e.target.value) || 0
-                      setForm({...next, peso_corrigido: pl > 0 ? (pl - dt).toString() : ''})
-                    }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold" />
+                    <input type="text" value={form.peso_liquido} readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold bg-gray-50" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Data Saída Origem</label>
+                    <input type="date" value={form.data_saida_origem} onChange={e => setForm({...form, data_saida_origem: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Data Entrada Destino</label>
+                    <input type="datetime-local" value={form.data_entrada_destino} onChange={e => setForm({...form, data_entrada_destino: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Data Saída Destino</label>
+                    <input type="datetime-local" value={form.data_saida_destino} onChange={e => setForm({...form, data_saida_destino: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Tempo Permanência</label>
+                    <input type="text" readOnly value={(() => {
+                      if (!form.data_entrada_destino || !form.data_saida_destino) return ''
+                      const ini = new Date(form.data_entrada_destino).getTime()
+                      const fim = new Date(form.data_saida_destino).getTime()
+                      if (isNaN(ini) || isNaN(fim) || fim <= ini) return ''
+                      const diffMin = Math.round((fim - ini) / 60000)
+                      const h = Math.floor(diffMin / 60)
+                      const m = diffMin % 60
+                      return h > 0 ? `${h}h ${m}min` : `${m}min`
+                    })()}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-blue-50 font-semibold text-blue-700" />
                   </div>
                 </div>
               </div>
@@ -567,10 +639,10 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG.`
                   ].map(({ perc, desc, label }) => (
                     <div key={perc} className="space-y-1">
                       <label className="block text-xs font-medium text-gray-700">{label} %</label>
-                      <input type="text" inputMode="decimal" value={(form as any)[perc]} onChange={e => setForm({...form, [perc]: e.target.value})}
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                      <input type="text" inputMode="decimal" value={(form as any)[perc]} onChange={e => handlePercChange(perc, e.target.value)}
+                        placeholder="0,00" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
                       <label className="block text-xs text-gray-500">{label} Desc</label>
-                      <input type="text" inputMode="decimal" value={(form as any)[desc]} onChange={e => updateDescField(desc, e.target.value)}
+                      <input type="text" inputMode="numeric" value={(form as any)[desc]} onChange={e => handleDescChange(desc, e.target.value)}
                         className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
                     </div>
                   ))}

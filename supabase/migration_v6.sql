@@ -78,7 +78,16 @@ ALTER TABLE romaneios
   ADD COLUMN IF NOT EXISTS partidos_desc NUMERIC,
   ADD COLUMN IF NOT EXISTS quebrados_desc NUMERIC;
 
--- 6) Índices
+-- 6) Renomear data_emissao → data_saida_origem + novos campos de data
+ALTER TABLE romaneios
+  ADD COLUMN IF NOT EXISTS data_saida_origem TEXT,
+  ADD COLUMN IF NOT EXISTS data_entrada_destino TEXT,
+  ADD COLUMN IF NOT EXISTS data_saida_destino TEXT;
+
+-- Migrar dados existentes de data_emissao para data_saida_origem
+UPDATE romaneios SET data_saida_origem = data_emissao WHERE data_saida_origem IS NULL AND data_emissao IS NOT NULL;
+
+-- 7) Índices
 CREATE INDEX IF NOT EXISTS idx_romaneios_tipo_nf ON romaneios(tipo_nf_id);
 CREATE INDEX IF NOT EXISTS idx_romaneios_origem ON romaneios(origem_id);
 CREATE INDEX IF NOT EXISTS idx_romaneios_destinatario ON romaneios(destinatario_id);
