@@ -18,9 +18,9 @@ const TABS: { key: Tab; label: string }[] = [
 ]
 
 function SimpleTable({
-  items, loading, onAdd, onEdit, onDelete, label,
+  items, loading, onAdd, onEdit, onDelete, label, showExtraColumns,
 }: {
-  items: any[]; loading: boolean; onAdd: () => void; onEdit: (item: any) => void; onDelete: (id: string) => void; label: string;
+  items: any[]; loading: boolean; onAdd: () => void; onEdit: (item: any) => void; onDelete: (id: string) => void; label: string; showExtraColumns?: boolean;
 }) {
   return (
     <div>
@@ -36,6 +36,12 @@ function SimpleTable({
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Nome</th>
+                {showExtraColumns && (
+                  <>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600 w-24">Eixos</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600 w-32">Peso Pauta (kg)</th>
+                  </>
+                )}
                 <th className="text-center px-4 py-3 font-semibold text-gray-600 w-20">Ativo</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600 w-24">Ações</th>
               </tr>
@@ -44,6 +50,12 @@ function SimpleTable({
               {items.map((item: any) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{item.nome}</td>
+                  {showExtraColumns && (
+                    <>
+                      <td className="px-4 py-3 text-center text-gray-600">{item.eixos || 0}</td>
+                      <td className="px-4 py-3 text-center text-gray-600">{(item.peso_pauta_kg || 0).toLocaleString('pt-BR')}</td>
+                    </>
+                  )}
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${item.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {item.ativo ? 'Sim' : 'Não'}
@@ -55,7 +67,7 @@ function SimpleTable({
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">Nenhum registro</td></tr>}
+              {items.length === 0 && <tr><td colSpan={showExtraColumns ? 5 : 3} className="px-4 py-8 text-center text-gray-400">Nenhum registro</td></tr>}
             </tbody>
           </table>
         </div>
@@ -170,6 +182,7 @@ export default function Admin() {
         onEdit={openEdit}
         onDelete={remove}
         label={currentLabel}
+        showExtraColumns={tab === 'tipos_caminhao'}
       />
 
       {/* Modal */}
