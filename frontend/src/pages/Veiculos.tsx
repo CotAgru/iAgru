@@ -61,10 +61,10 @@ export default function Veiculos() {
   }
 
   const save = async () => {
-    if (!form.cadastro_id || !form.placa || !form.tipo_caminhao) { toast.error('Proprietario, placa e tipo sao obrigatorios'); return }
+    if (!form.cadastro_id || !form.placa || !form.tipo_caminhao) { toast.error('Proprietário, placa e tipo são obrigatórios'); return }
     const data = { ...form, ano: form.ano ? Number(form.ano) : null }
     try {
-      if (editing) { await updateVeiculo(editing.id, data); toast.success('Veiculo atualizado') }
+      if (editing) { await updateVeiculo(editing.id, data); toast.success('Veículo atualizado') }
       else { await createVeiculo(data); toast.success('Veiculo cadastrado') }
       setShowForm(false); load()
     } catch { toast.error('Erro ao salvar') }
@@ -92,9 +92,9 @@ export default function Veiculos() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Tipo Caminhao</th>
                 <th className="text-center px-4 py-3 font-semibold text-gray-600">Eixos</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Marca/Modelo</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Proprietario</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">Proprietário</th>
                 <th className="text-right px-4 py-3 font-semibold text-gray-600">Peso Pauta (Kg)</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -181,7 +181,7 @@ export default function Veiculos() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>

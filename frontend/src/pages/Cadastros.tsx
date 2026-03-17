@@ -7,7 +7,7 @@ import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-m
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const DEFAULT_CENTER = { lat: -15.7801, lng: -47.9292 }
 
-const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Transportadora']
+const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Produtor', 'Transportadora']
 const TIPOS_COM_LOCALIZACAO = ['Fazenda', 'Armazem', 'Industria', 'Porto', 'Fornecedor']
 
 const TIPOS_CAMINHAO = [
@@ -239,9 +239,9 @@ export default function Cadastros() {
   }
 
   const save = async () => {
-    if (!form.nome.trim()) { toast.error('Nome e obrigatorio'); return }
-    if (!form.uf) { toast.error('UF e obrigatorio'); return }
-    if (!form.cidade) { toast.error('Cidade e obrigatoria'); return }
+    if (!form.nome.trim()) { toast.error('Nome é obrigatório'); return }
+    if (!form.uf) { toast.error('UF é obrigatória'); return }
+    if (!form.cidade) { toast.error('Cidade é obrigatória'); return }
     if (form.tipos.length === 0) { toast.error('Selecione pelo menos um Tipo'); return }
     const payload = {
       ...form,
@@ -277,7 +277,7 @@ export default function Cadastros() {
   const saveVeiculo = async () => {
     const ownerId = savedMotoristaId || editing?.id
     if (!ownerId) { toast.error('Salve o cadastro do motorista primeiro'); return }
-    if (!veiculoForm.placa) { toast.error('Placa e obrigatoria'); return }
+    if (!veiculoForm.placa) { toast.error('Placa é obrigatória'); return }
     try {
       await createVeiculo({
         cadastro_id: ownerId,
@@ -436,7 +436,7 @@ export default function Cadastros() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Cidade/UF</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Tipos</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Telefone</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -504,7 +504,7 @@ export default function Cadastros() {
 
               {/* Nome */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome / Razao Social *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome / Razão Social *</label>
                 <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
@@ -737,9 +737,9 @@ export default function Cadastros() {
                 </div>
               )}
 
-              {/* Observacoes */}
+              {/* Observações */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>

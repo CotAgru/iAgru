@@ -1,22 +1,26 @@
 import { ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront, ClipboardList, FileText, Menu, X, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
+import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront, ClipboardList, FileText, Menu, X, FolderOpen, ChevronDown, ChevronRight, Settings } from 'lucide-react'
 
 const topItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
 ]
 
 const operacaoChildren = [
-  { path: '/operacoes', label: 'Operacoes', icon: FolderOpen },
+  { path: '/operacoes', label: 'Operações', icon: FolderOpen },
   { path: '/ordens', label: 'Ordens de Carregamento', icon: ClipboardList },
   { path: '/romaneios', label: 'Romaneios', icon: FileText },
 ]
 
 const bottomItems = [
   { path: '/cadastros', label: 'Cadastros', icon: Users },
-  { path: '/veiculos', label: 'Veiculos', icon: CarFront },
+  { path: '/veiculos', label: 'Veículos', icon: CarFront },
   { path: '/produtos', label: 'Produtos', icon: Package },
-  { path: '/precos', label: 'Precos Contratados', icon: DollarSign },
+  { path: '/precos', label: 'Preços Contratados', icon: DollarSign },
+]
+
+const adminItems = [
+  { path: '/admin', label: 'Administração', icon: Settings },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -59,7 +63,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <Truck className="w-8 h-8" />
               <div>
                 <h1 className="text-xl font-bold">FretAgru</h1>
-                <p className="text-xs text-green-300">Gestao de Fretes</p>
+                <p className="text-xs text-green-300">Gestão de Fretes</p>
               </div>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 hover:bg-green-700 rounded">
@@ -76,7 +80,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               isOperacaoActive ? 'bg-green-700/70 text-white' : 'text-green-100 hover:bg-green-700/50'
             }`}>
             <FolderOpen className="w-5 h-5 flex-shrink-0" />
-            <span className="flex-1 text-left">Operacao</span>
+            <span className="flex-1 text-left">Operação</span>
             {opOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
           {opOpen && (
@@ -87,6 +91,8 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           <div className="border-t border-green-700 my-2" />
           {bottomItems.map(item => <NavLink key={item.path} {...item} />)}
+          <div className="border-t border-green-700 my-2" />
+          {adminItems.map(item => <NavLink key={item.path} {...item} />)}
         </nav>
         <div className="p-4 border-t border-green-700 text-xs text-green-300">
           <p>iAgru Ecossistema</p>

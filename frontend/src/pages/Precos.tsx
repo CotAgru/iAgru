@@ -111,7 +111,7 @@ export default function Precos() {
   }
 
   const save = async () => {
-    if (!form.origem_id || !form.destino_id || !form.produto_id || !form.valor) { toast.error('Origem, destino, produto e valor sao obrigatorios'); return }
+    if (!form.origem_id || !form.destino_id || !form.produto_id || !form.valor) { toast.error('Origem, destino, produto e valor são obrigatórios'); return }
     const payload: any = {
       origem_id: form.origem_id,
       destino_id: form.destino_id,
@@ -253,7 +253,7 @@ export default function Precos() {
                 <th className="text-left px-3 sm:px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Transportador</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Valor</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Dist.</th>
-                <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-right px-3 sm:px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -330,7 +330,7 @@ export default function Precos() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
             </div>

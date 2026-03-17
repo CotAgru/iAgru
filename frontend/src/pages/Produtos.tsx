@@ -25,7 +25,7 @@ export default function Produtos() {
   }
 
   const save = async () => {
-    if (!form.nome || !form.tipo) { toast.error('Nome e tipo sao obrigatorios'); return }
+    if (!form.nome || !form.tipo) { toast.error('Nome e tipo são obrigatórios'); return }
     try {
       if (editing) { await updateProduto(editing.id, form); toast.success('Produto atualizado') }
       else { await createProduto(form); toast.success('Produto cadastrado') }
@@ -54,7 +54,7 @@ export default function Produtos() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Tipo</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Unidade</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -105,7 +105,7 @@ export default function Produtos() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>

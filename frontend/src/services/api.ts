@@ -94,9 +94,54 @@ export const updatePreco = async (id: string, data: any) =>
 export const deletePreco = async (id: string) =>
   throwIfError(await supabase.from('precos_contratados').delete().eq('id', id))
 
+// === ANO SAFRA ===
+export const getAnosSafra = async () =>
+  throwIfError(await supabase.from('ano_safra').select('*').order('nome'))
+
+export const createAnoSafra = async (data: any) =>
+  throwIfError(await supabase.from('ano_safra').insert(data).select().single())
+
+export const updateAnoSafra = async (id: string, data: any) =>
+  throwIfError(await supabase.from('ano_safra').update(data).eq('id', id).select().single())
+
+export const deleteAnoSafra = async (id: string) =>
+  throwIfError(await supabase.from('ano_safra').delete().eq('id', id))
+
+// === TIPOS NF ===
+export const getTiposNf = async () =>
+  throwIfError(await supabase.from('tipos_nf').select('*').order('nome'))
+
+export const createTipoNf = async (data: any) =>
+  throwIfError(await supabase.from('tipos_nf').insert(data).select().single())
+
+export const updateTipoNf = async (id: string, data: any) =>
+  throwIfError(await supabase.from('tipos_nf').update(data).eq('id', id).select().single())
+
+export const deleteTipoNf = async (id: string) =>
+  throwIfError(await supabase.from('tipos_nf').delete().eq('id', id))
+
+// === TIPOS TICKET ===
+export const getTiposTicket = async () =>
+  throwIfError(await supabase.from('tipos_ticket').select('*').order('nome'))
+
+export const createTipoTicket = async (data: any) =>
+  throwIfError(await supabase.from('tipos_ticket').insert(data).select().single())
+
+export const updateTipoTicket = async (id: string, data: any) =>
+  throwIfError(await supabase.from('tipos_ticket').update(data).eq('id', id).select().single())
+
+export const deleteTipoTicket = async (id: string) =>
+  throwIfError(await supabase.from('tipos_ticket').delete().eq('id', id))
+
 // === OPERACOES ===
-export const getOperacoes = async () =>
-  throwIfError(await supabase.from('operacoes').select('*').order('created_at', { ascending: false }))
+export const getOperacoes = async () => {
+  const { data, error } = await supabase
+    .from('operacoes')
+    .select('*, ano_safra(id, nome)')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((o: any) => ({ ...o, ano_safra_nome: o.ano_safra?.nome || null }))
+}
 
 export const createOperacao = async (data: any) =>
   throwIfError(await supabase.from('operacoes').insert(data).select().single())
@@ -163,7 +208,17 @@ export const removeOrdemTransportador = async (id: string) =>
 export const getRomaneios = async () => {
   const { data, error } = await supabase
     .from('romaneios')
-    .select(`*, ordens_carregamento(numero_ordem_fmt, nome_ordem)`)
+    .select(`
+      *,
+      ordens_carregamento(numero_ordem_fmt, nome_ordem, origem_id, destino_id, produto_id,
+        origem:cadastros!ordens_carregamento_origem_id_fkey(id, nome, nome_fantasia),
+        destino:cadastros!ordens_carregamento_destino_id_fkey(id, nome, nome_fantasia),
+        produtos(id, nome)
+      ),
+      tipos_nf(id, nome),
+      tipos_ticket(id, nome),
+      ano_safra(id, nome)
+    `)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data.map((r: any) => ({

@@ -9,6 +9,7 @@ import Precos from './pages/Precos'
 import Ordens from './pages/Ordens'
 import Romaneios from './pages/Romaneios'
 import Operacoes from './pages/Operacoes'
+import Admin from './pages/Admin'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/veiculos" element={<Veiculos />} />
           <Route path="/produtos" element={<Produtos />} />
           <Route path="/precos" element={<Precos />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </Layout>
       <Toaster position="top-right" />

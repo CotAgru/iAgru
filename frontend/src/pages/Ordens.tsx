@@ -10,7 +10,7 @@ const STATUS_OPTIONS = [
   { value: 'cancelado', label: 'Cancelado', color: 'bg-red-100 text-red-700' },
 ]
 const TIPOS_ORIGEM = ['Fazenda', 'Armazem', 'Industria', 'Porto', 'Fornecedor']
-const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Transportadora']
+const TODOS_TIPOS = ['Armazem', 'Fazenda', 'Fornecedor', 'Industria', 'Motorista', 'Outro', 'Porto', 'Produtor', 'Transportadora']
 
 const formatPhone = (value: string) => {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -147,9 +147,9 @@ export default function Ordens() {
   }
 
   const save = async () => {
-    if (!form.nome_ordem.trim()) { toast.error('Nome da Ordem e obrigatorio'); return }
+    if (!form.nome_ordem.trim()) { toast.error('Nome da Ordem é obrigatório'); return }
     if (!form.origem_id || !form.destino_id || !form.produto_id) {
-      toast.error('Origem, destino e produto sao obrigatorios'); return
+      toast.error('Origem, destino e produto são obrigatórios'); return
     }
     const payload: any = {
       nome_ordem: form.nome_ordem,
@@ -308,9 +308,9 @@ export default function Ordens() {
 
   // === Pop-up save handlers ===
   const savePopupCadastro = async () => {
-    if (!miniCadForm.nome.trim()) { toast.error('Nome e obrigatorio'); return }
-    if (!miniCadForm.uf) { toast.error('UF e obrigatoria'); return }
-    if (!miniCadForm.cidade) { toast.error('Cidade e obrigatoria'); return }
+    if (!miniCadForm.nome.trim()) { toast.error('Nome é obrigatório'); return }
+    if (!miniCadForm.uf) { toast.error('UF é obrigatória'); return }
+    if (!miniCadForm.cidade) { toast.error('Cidade é obrigatória'); return }
     if (miniCadForm.tipos.length === 0) { toast.error('Selecione pelo menos um Tipo'); return }
     setSavingPopup(true)
     try {
@@ -338,7 +338,7 @@ export default function Ordens() {
   }
 
   const savePopupProduto = async () => {
-    if (!miniProdForm.nome.trim()) { toast.error('Nome e obrigatorio'); return }
+    if (!miniProdForm.nome.trim()) { toast.error('Nome é obrigatório'); return }
     setSavingPopup(true)
     try {
       const created = await createProduto({ nome: miniProdForm.nome, tipo: miniProdForm.tipo, unidade_medida: miniProdForm.unidade_medida, ativo: true })
@@ -352,7 +352,7 @@ export default function Ordens() {
 
   const savePopupPreco = async () => {
     if (!miniPrecoForm.origem_id || !miniPrecoForm.destino_id || !miniPrecoForm.produto_id || !miniPrecoForm.valor) {
-      toast.error('Origem, destino, produto e valor sao obrigatorios'); return
+      toast.error('Origem, destino, produto e valor são obrigatórios'); return
     }
     setSavingPopup(true)
     try {
@@ -403,7 +403,7 @@ export default function Ordens() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Origem</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Destino</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Produto</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">Acoes</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-600">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -526,9 +526,9 @@ export default function Ordens() {
                 )}
               </div>
 
-              {/* Observacoes */}
+              {/* Observações */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
@@ -648,9 +648,9 @@ export default function Ordens() {
                 </div>
               </div>
 
-              {/* Nome / Razao Social */}
+              {/* Nome / Razão Social */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome / Razao Social *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome / Razão Social *</label>
                 <input type="text" value={miniCadForm.nome} onChange={e => setMiniCadForm({...miniCadForm, nome: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
@@ -735,9 +735,9 @@ export default function Ordens() {
                 </div>
               )}
 
-              {/* Observacoes */}
+              {/* Observações */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={miniCadForm.observacoes} onChange={e => setMiniCadForm({...miniCadForm, observacoes: e.target.value})} rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
               </div>
