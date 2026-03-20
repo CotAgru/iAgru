@@ -10,6 +10,7 @@ import Ordens from './pages/Ordens'
 import Romaneios from './pages/Romaneios'
 import Operacoes from './pages/Operacoes'
 import Admin from './pages/Admin'
+import Importacao from './pages/Importacao'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/produtos" element={<Produtos />} />
           <Route path="/precos" element={<Precos />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/importacao" element={<Importacao />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

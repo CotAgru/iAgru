@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront, ClipboardList, FileText, Menu, X, FolderOpen, ChevronDown, ChevronRight, Settings } from 'lucide-react'
+import { Truck, Users, Package, DollarSign, LayoutDashboard, CarFront, ClipboardList, FileText, Menu, X, FolderOpen, ChevronDown, ChevronRight, Settings, Upload } from 'lucide-react'
 
 const topItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -20,6 +20,7 @@ const bottomItems = [
 ]
 
 const adminItems = [
+  { path: '/importacao', label: 'Importação', icon: Upload },
   { path: '/admin', label: 'Administração', icon: Settings },
 ]
 
