@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, ChevronDown, FileSpreadsheet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos, getTiposCaminhao } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
@@ -8,6 +8,7 @@ import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtInt } from '../utils/format'
 import Pagination, { usePagination } from '../components/Pagination'
+import { exportToExcel } from '../utils/export'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const DEFAULT_CENTER = { lat: -15.7801, lng: -47.9292 }
@@ -350,13 +351,43 @@ export default function Cadastros() {
     Motorista: 'bg-indigo-100 text-indigo-700', Outro: 'bg-gray-100 text-gray-700',
   }
 
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: 'cadastros_fretagru',
+      title: 'Cadastros',
+      columns: [
+        { key: 'nome', label: 'Nome' },
+        { key: 'nome_fantasia', label: 'Nome Fantasia' },
+        { key: 'cpf_cnpj', label: 'CPF/CNPJ' },
+        { key: 'telefone1', label: 'Telefone' },
+        { key: 'uf', label: 'UF' },
+        { key: 'cidade', label: 'Cidade' },
+        { key: 'tipos', label: 'Tipos' },
+        { key: 'ativo', label: 'Ativo' },
+      ],
+      data: sortedFiltered,
+      getValue: (item, key) => {
+        if (key === 'tipos') return (item.tipos || []).join(', ')
+        if (key === 'ativo') return item.ativo ? 'Sim' : 'Não'
+        return item[key] || ''
+      }
+    })
+    toast.success(`${sortedFiltered.length} cadastros exportados`)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Cadastros</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Cadastro
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm" title="Exportar Excel">
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base whitespace-nowrap">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Cadastro
+          </button>
+        </div>
       </div>
 
       {/* Barra de busca */}

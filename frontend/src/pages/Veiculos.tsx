@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Filter, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Filter, ChevronDown, FileSpreadsheet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getVeiculos, createVeiculo, updateVeiculo, deleteVeiculo, getCadastros, getTiposCaminhao } from '../services/api'
 import ViewModal, { Field } from '../components/ViewModal'
 import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtInt } from '../utils/format'
+import { exportToExcel } from '../utils/export'
 
 const emptyForm = { cadastro_id: '', placa: '', tipo_caminhao: '', eixos: 0, peso_pauta_kg: 0, marca: '', modelo: '', ano: '', observacoes: '', ativo: true }
 
@@ -125,11 +126,42 @@ export default function Veiculos() {
 
   const { sortedData: sortedItems, sortKey, sortDirection, toggleSort } = useSort(filteredItems)
 
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: 'veiculos_fretagru',
+      title: 'Veiculos',
+      columns: [
+        { key: 'placa', label: 'Placa' },
+        { key: 'tipo_caminhao', label: 'Tipo' },
+        { key: 'eixos', label: 'Eixos' },
+        { key: 'peso_pauta_kg', label: 'Peso Pauta (kg)' },
+        { key: 'proprietario_nome', label: 'Proprietário' },
+        { key: 'marca', label: 'Marca' },
+        { key: 'modelo', label: 'Modelo' },
+        { key: 'ano', label: 'Ano' },
+        { key: 'ativo', label: 'Ativo' },
+      ],
+      data: sortedItems,
+      getValue: (item, key) => {
+        if (key === 'peso_pauta_kg') return fmtInt(item.peso_pauta_kg)
+        if (key === 'ativo') return item.ativo ? 'Sim' : 'Não'
+        return item[key] || ''
+      }
+    })
+    toast.success(`${sortedItems.length} veículos exportados`)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Veículos</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Veiculo</button>
+        <div className="flex gap-2">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm" title="Exportar Excel">
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Veiculo</button>
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">

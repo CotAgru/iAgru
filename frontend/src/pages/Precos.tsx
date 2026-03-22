@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Filter, FileDown, Loader2, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Filter, FileDown, Loader2, ChevronDown, FileSpreadsheet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
 import ViewModal, { Field } from '../components/ViewModal'
@@ -7,6 +7,7 @@ import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtBRL, fmtInt, fmtData } from '../utils/format'
 import Pagination, { usePagination } from '../components/Pagination'
+import { exportToExcel } from '../utils/export'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 const UNIDADES_PRECO = ['R$/ton', 'R$/sc', 'R$/km', 'R$/viagem']
@@ -293,11 +294,46 @@ export default function Precos() {
 
   const { sortedData: sortedItems, sortKey, sortDirection, toggleSort } = useSort(filteredItems)
 
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: 'precos_contratados_fretagru',
+      title: 'Preços Contratados',
+      columns: [
+        { key: 'origem_nome', label: 'Origem' },
+        { key: 'destino_nome', label: 'Destino' },
+        { key: 'produto_nome', label: 'Produto' },
+        { key: 'fornecedor_nome', label: 'Fornecedor' },
+        { key: 'valor', label: 'Valor' },
+        { key: 'unidade_preco', label: 'Unidade' },
+        { key: 'distancia_km', label: 'Distância (km)' },
+        { key: 'vigencia_inicio', label: 'Vigência Início' },
+        { key: 'vigencia_fim', label: 'Vigência Fim' },
+        { key: 'ativo', label: 'Ativo' },
+      ],
+      data: sortedItems,
+      getValue: (item, key) => {
+        if (key === 'valor') return fmtBRL(item.valor)
+        if (key === 'distancia_km') return item.distancia_km ? fmtInt(item.distancia_km) : ''
+        if (key === 'vigencia_inicio') return item.vigencia_inicio ? fmtData(item.vigencia_inicio) : ''
+        if (key === 'vigencia_fim') return item.vigencia_fim ? fmtData(item.vigencia_fim) : ''
+        if (key === 'ativo') return item.ativo ? 'Sim' : 'Não'
+        return item[key] || ''
+      }
+    })
+    toast.success(`${sortedItems.length} preços exportados`)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Precos Contratados</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Preco</button>
+        <div className="flex gap-2">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm" title="Exportar Excel">
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Preco</button>
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, X, Filter, ChevronDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Filter, ChevronDown, FileSpreadsheet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getProdutos, createProduto, updateProduto, deleteProduto } from '../services/api'
 import ViewModal, { Field } from '../components/ViewModal'
 import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
+import { exportToExcel } from '../utils/export'
 
 const TIPOS = ['Grao', 'Insumo']
 const UNIDADES = ['ton', 'kg', 'sc', 'l']
@@ -93,11 +94,37 @@ export default function Produtos() {
 
   const { sortedData: sortedItems, sortKey, sortDirection, toggleSort } = useSort(filteredItems)
 
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: 'produtos_fretagru',
+      title: 'Produtos',
+      columns: [
+        { key: 'nome', label: 'Nome' },
+        { key: 'tipo', label: 'Tipo' },
+        { key: 'unidade_medida', label: 'Unidade' },
+        { key: 'observacoes', label: 'Observações' },
+        { key: 'ativo', label: 'Ativo' },
+      ],
+      data: sortedItems,
+      getValue: (item, key) => {
+        if (key === 'ativo') return item.ativo ? 'Sim' : 'Não'
+        return item[key] || ''
+      }
+    })
+    toast.success(`${sortedItems.length} produtos exportados`)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Produtos Transportados</h1>
-        <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Produto</button>
+        <div className="flex gap-2">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm" title="Exportar Excel">
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          <button onClick={openNew} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Produto</button>
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">
