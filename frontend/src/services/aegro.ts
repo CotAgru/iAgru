@@ -1,24 +1,18 @@
 /**
  * Serviço de integração com a API do Aegro
- * Documentação: https://api.aegro.com.br
- * Base URL: https://api.aegro.com.br/api/v1
- * Auth: Bearer Token
+ * Usa proxy Vercel serverless (/api/aegro-proxy) para contornar CORS
+ * Documentação Aegro: https://api.aegro.com.br
  */
 
-const AEGRO_BASE_URL = 'https://api.aegro.com.br/api/v1'
-
-async function aegroFetch(endpoint: string, token: string, options?: RequestInit) {
-  const resp = await fetch(`${AEGRO_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(options?.headers || {}),
-    },
+async function aegroFetch(endpoint: string, token: string) {
+  const resp = await fetch('/api/aegro-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint, token }),
   })
   if (!resp.ok) {
-    const text = await resp.text().catch(() => '')
-    throw new Error(`Aegro API erro ${resp.status}: ${text || resp.statusText}`)
+    const err = await resp.json().catch(() => ({ error: resp.statusText }))
+    throw new Error(err?.error || err?.detail || `Erro ${resp.status}`)
   }
   return resp.json()
 }
