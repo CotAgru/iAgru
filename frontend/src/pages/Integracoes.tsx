@@ -349,16 +349,23 @@ export default function Integracoes() {
   }
 
   // === CONFIRMAR IMPORTAÇÃO ===
+  const hasActiveFilter = !!(filterNome || filterType || filterAnoSafra)
+
   const handleConfirmImport = async () => {
-    const selected = cropMappings.filter(m => m.selected)
-    if (selected.length === 0) { toast.error('Selecione ao menos uma safra'); return }
+    // Se há filtro ativo, importar apenas as filtradas+selecionadas
+    const candidates = hasActiveFilter
+      ? filteredMappings.filter(m => m.selected)
+      : cropMappings.filter(m => m.selected)
+    if (candidates.length === 0) { toast.error('Selecione ao menos uma safra'); return }
 
     // Validar mapeamento
-    const invalid = selected.filter(m => !m.culturaId || !m.anoSafraId)
+    const invalid = candidates.filter(m => !m.culturaId || !m.anoSafraId)
     if (invalid.length > 0) {
       toast.error(`${invalid.length} safra(s) sem cultura ou ano safra definido. Preencha todos os campos obrigatórios.`)
       return
     }
+
+    const selected = candidates
 
     setSavingImport(true)
     try {
@@ -751,32 +758,44 @@ export default function Integracoes() {
                 </div>
 
                 {/* Footer do modal */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-t bg-gray-50 rounded-b-xl shrink-0">
-                  <div className="text-xs text-gray-500 space-y-0.5">
-                    <p>
-                      {cropMappings.filter(m => m.selected).length} de {cropMappings.length} selecionadas
-                      {cropMappings.filter(m => m.alreadyImported).length > 0 && (
-                        <span className="text-green-600 ml-1">
-                          ({cropMappings.filter(m => m.alreadyImported).length} já importadas)
-                        </span>
-                      )}
-                    </p>
-                    {cropMappings.filter(m => m.selected && (!m.culturaId || !m.anoSafraId)).length > 0 && (
-                      <p className="text-red-500">
-                        {cropMappings.filter(m => m.selected && (!m.culturaId || !m.anoSafraId)).length} com campos obrigatórios vazios
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowMapModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100">
-                      Cancelar
-                    </button>
-                    <button onClick={handleConfirmImport} disabled={savingImport || cropMappings.filter(m => m.selected).length === 0}
-                      className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-                      {savingImport ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><Check className="w-4 h-4" /> Confirmar Importação</>}
-                    </button>
-                  </div>
-                </div>
+                {(() => {
+                  const importCandidates = hasActiveFilter
+                    ? filteredMappings.filter(m => m.selected)
+                    : cropMappings.filter(m => m.selected)
+                  const invalidCount = importCandidates.filter(m => !m.culturaId || !m.anoSafraId).length
+                  const importedCount = cropMappings.filter(m => m.alreadyImported).length
+                  return (
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-t bg-gray-50 rounded-b-xl shrink-0">
+                      <div className="text-xs text-gray-500 space-y-0.5">
+                        <p>
+                          {hasActiveFilter ? (
+                            <><b>{importCandidates.length}</b> de {filteredMappings.length} filtradas selecionadas <span className="text-gray-400">(total: {cropMappings.length})</span></>
+                          ) : (
+                            <>{importCandidates.length} de {cropMappings.length} selecionadas</>
+                          )}
+                          {importedCount > 0 && (
+                            <span className="text-green-600 ml-1">({importedCount} já importadas)</span>
+                          )}
+                        </p>
+                        {invalidCount > 0 && (
+                          <p className="text-red-500">{invalidCount} com campos obrigatórios vazios</p>
+                        )}
+                        {hasActiveFilter && (
+                          <p className="text-blue-500">Importação aplicará apenas às safras filtradas e selecionadas</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowMapModal(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100">
+                          Cancelar
+                        </button>
+                        <button onClick={handleConfirmImport} disabled={savingImport || importCandidates.length === 0}
+                          className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                          {savingImport ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><Check className="w-4 h-4" /> Confirmar ({importCandidates.length})</>}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
               </>
             )}
           </div>
