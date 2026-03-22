@@ -689,13 +689,43 @@ export default function Integracoes() {
       toast.error('Nome do cadastro é obrigatório')
       return
     }
-    // Montar payload apenas com campos que têm valor (Aegro não aceita undefined)
-    const payload: any = { name: s.iagruNome.trim() }
+    
+    // Montar payload conforme schema oficial da API Aegro
+    const payload: any = {
+      name: s.iagruNome.trim(),
+      types: ['PROVIDER'], // Fornecedor por padrão
+    }
+    
     if (s.iagruNomeFantasia?.trim()) payload.tradeName = s.iagruNomeFantasia.trim()
-    if (s.iagruCpfCnpj?.trim()) payload.cpfCnpj = s.iagruCpfCnpj.trim()
-    if (s.iagruTelefone?.trim()) payload.phone = s.iagruTelefone.trim()
-    if (s.iagruUf?.trim()) payload.state = s.iagruUf.trim()
-    if (s.iagruCidade?.trim()) payload.city = s.iagruCidade.trim()
+    
+    // fiscalNumber (CPF/CNPJ) - objeto
+    if (s.iagruCpfCnpj?.trim()) {
+      const cnpj = s.iagruCpfCnpj.replace(/\D/g, '')
+      payload.fiscalNumber = {
+        code: cnpj,
+        countryCode: 'BR',
+        fiscalNumberType: cnpj.length === 14 ? 'CNPJ' : 'CPF'
+      }
+    }
+    
+    // address - objeto (se tiver UF ou cidade)
+    if (s.iagruUf?.trim() || s.iagruCidade?.trim()) {
+      payload.address = {
+        country: { isoCode: 'BR' }
+      }
+      if (s.iagruUf?.trim()) {
+        payload.address.countryDivision = { isoCode: `BR-${s.iagruUf.trim()}` }
+      }
+      if (s.iagruCidade?.trim()) {
+        payload.address.city = { name: s.iagruCidade.trim() }
+      }
+    }
+    
+    // contact - objeto (se tiver telefone)
+    if (s.iagruTelefone?.trim()) {
+      const phone = s.iagruTelefone.replace(/\D/g, '')
+      payload.contact = { phone }
+    }
 
     setPreviewData({ idx, sync: s, payload })
     setShowPreviewModal(true)
