@@ -693,10 +693,10 @@ export default function Integracoes() {
     // Montar payload conforme schema oficial da API Aegro
     const payload: any = {
       name: s.iagruNome.trim(),
+      tradeName: (s.iagruNomeFantasia?.trim() || s.iagruNome.trim()), // Apelido obrigatório - usa nome_fantasia ou nome
+      legalName: s.iagruNome.trim(), // Nome legal/razão social
       types: ['PROVIDER'], // Fornecedor por padrão
     }
-    
-    if (s.iagruNomeFantasia?.trim()) payload.tradeName = s.iagruNomeFantasia.trim()
     
     // fiscalNumber (CPF/CNPJ) - objeto
     if (s.iagruCpfCnpj?.trim()) {
