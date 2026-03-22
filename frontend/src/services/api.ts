@@ -300,6 +300,19 @@ export const updateSafra = async (id: string, data: any) =>
 export const deleteSafra = async (id: string) =>
   throwIfError(await supabase.from('safras').delete().eq('id', id))
 
+export const getSafraByAegroKey = async (aegroKey: string) => {
+  const { data } = await supabase.from('safras').select('id').eq('aegro_crop_key', aegroKey).maybeSingle()
+  return data
+}
+
+export const upsertSafraFromAegro = async (aegroKey: string, payload: any) => {
+  const existing = await getSafraByAegroKey(aegroKey)
+  if (existing) {
+    return throwIfError(await supabase.from('safras').update(payload).eq('id', existing.id).select().single())
+  }
+  return throwIfError(await supabase.from('safras').insert({ ...payload, aegro_crop_key: aegroKey }).select().single())
+}
+
 // === CONTRATOS DE VENDA (ContAgru) ===
 export const getContratosVenda = async () => {
   const { data, error } = await supabase
