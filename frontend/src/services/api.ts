@@ -250,44 +250,148 @@ export const deleteRomaneio = async (id: string) =>
   throwIfError(await supabase.from('romaneios').delete().eq('id', id))
 
 // === UPLOAD IMAGEM ROMANEIO (Supabase Storage) ===
+// === CULTURAS (universal) ===
+export const getCulturas = async () =>
+  throwIfError(await supabase.from('culturas').select('*').order('nome'))
+
+export const createCultura = async (data: any) =>
+  throwIfError(await supabase.from('culturas').insert(data).select().single())
+
+export const updateCultura = async (id: string, data: any) =>
+  throwIfError(await supabase.from('culturas').update(data).eq('id', id).select().single())
+
+export const deleteCultura = async (id: string) =>
+  throwIfError(await supabase.from('culturas').delete().eq('id', id))
+
+// === TIPOS SAFRA (universal) ===
+export const getTiposSafra = async () =>
+  throwIfError(await supabase.from('tipos_safra').select('*').order('nome'))
+
+export const createTipoSafra = async (data: any) =>
+  throwIfError(await supabase.from('tipos_safra').insert(data).select().single())
+
+export const updateTipoSafra = async (id: string, data: any) =>
+  throwIfError(await supabase.from('tipos_safra').update(data).eq('id', id).select().single())
+
+export const deleteTipoSafra = async (id: string) =>
+  throwIfError(await supabase.from('tipos_safra').delete().eq('id', id))
+
+// === SAFRAS (universal — combina ano_safra + cultura + tipo_safra) ===
+export const getSafras = async () => {
+  const { data, error } = await supabase
+    .from('safras')
+    .select('*, ano_safra:ano_safra(nome), culturas(nome), tipos_safra(nome)')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((s: any) => ({
+    ...s,
+    ano_safra_nome: s.ano_safra?.nome,
+    cultura_nome: s.culturas?.nome,
+    tipo_safra_nome: s.tipos_safra?.nome,
+  }))
+}
+
+export const createSafra = async (data: any) =>
+  throwIfError(await supabase.from('safras').insert(data).select().single())
+
+export const updateSafra = async (id: string, data: any) =>
+  throwIfError(await supabase.from('safras').update(data).eq('id', id).select().single())
+
+export const deleteSafra = async (id: string) =>
+  throwIfError(await supabase.from('safras').delete().eq('id', id))
+
+// === CONTRATOS DE VENDA (ContAgru) ===
+export const getContratosVenda = async () => {
+  const { data, error } = await supabase
+    .from('contratos_venda')
+    .select(`
+      *,
+      comprador:cadastros!contratos_venda_comprador_id_fkey(nome, nome_fantasia),
+      corretor:cadastros!contratos_venda_corretor_id_fkey(nome, nome_fantasia),
+      produtos(nome, tipo),
+      safras(nome),
+      local_entrega:cadastros!contratos_venda_local_entrega_id_fkey(nome, nome_fantasia)
+    `)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((c: any) => ({
+    ...c,
+    comprador_nome: c.comprador?.nome_fantasia || c.comprador?.nome,
+    corretor_nome: c.corretor?.nome_fantasia || c.corretor?.nome,
+    produto_nome: c.produtos?.nome,
+    safra_nome: c.safras?.nome,
+    local_entrega_nome: c.local_entrega?.nome_fantasia || c.local_entrega?.nome,
+  }))
+}
+
+export const createContratoVenda = async (data: any) =>
+  throwIfError(await supabase.from('contratos_venda').insert(data).select().single())
+
+export const updateContratoVenda = async (id: string, data: any) =>
+  throwIfError(await supabase.from('contratos_venda').update(data).eq('id', id).select().single())
+
+export const deleteContratoVenda = async (id: string) =>
+  throwIfError(await supabase.from('contratos_venda').delete().eq('id', id))
+
+// === COMPRA DE INSUMOS (ContAgru) ===
+export const getComprasInsumo = async () => {
+  const { data, error } = await supabase
+    .from('contratos_compra_insumo')
+    .select(`
+      *,
+      fornecedor:cadastros!contratos_compra_insumo_fornecedor_id_fkey(nome, nome_fantasia),
+      produtos(nome, tipo),
+      safras(nome)
+    `)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data.map((c: any) => ({
+    ...c,
+    fornecedor_nome: c.fornecedor?.nome_fantasia || c.fornecedor?.nome,
+    produto_nome: c.produtos?.nome,
+    safra_nome: c.safras?.nome,
+  }))
+}
+
+export const createCompraInsumo = async (data: any) =>
+  throwIfError(await supabase.from('contratos_compra_insumo').insert(data).select().single())
+
+export const updateCompraInsumo = async (id: string, data: any) =>
+  throwIfError(await supabase.from('contratos_compra_insumo').update(data).eq('id', id).select().single())
+
+export const deleteCompraInsumo = async (id: string) =>
+  throwIfError(await supabase.from('contratos_compra_insumo').delete().eq('id', id))
+
+// === UPLOAD IMAGEM ROMANEIO (Supabase Storage) ===
 export const uploadRomaneioImage = async (base64DataUrl: string, romaneioId?: string): Promise<string> => {
-  console.log('🔄 Iniciando upload de imagem...')
   
   const match = base64DataUrl.match(/^data:(image\/\w+);base64,(.+)$/)
   if (!match) {
-    console.error('❌ Formato de imagem inválido')
     throw new Error('Formato de imagem inválido')
   }
   
   const mimeType = match[1]
   const ext = mimeType.split('/')[1] || 'jpeg'
-  console.log(`📦 Tipo: ${mimeType}, Extensão: ${ext}`)
   
   const byteString = atob(match[2])
   const ab = new ArrayBuffer(byteString.length)
   const ia = new Uint8Array(ab)
   for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
   const blob = new Blob([ab], { type: mimeType })
-  console.log(`📊 Tamanho do blob: ${blob.size} bytes`)
 
   const fileName = `${romaneioId || crypto.randomUUID()}_${Date.now()}.${ext}`
-  console.log(`📁 Nome do arquivo: ${fileName}`)
   
   const { data, error } = await supabase.storage
     .from('romaneios-img')
     .upload(fileName, blob, { contentType: mimeType, upsert: true })
   
   if (error) {
-    console.error('❌ Erro no upload:', error)
     throw new Error(`Erro ao fazer upload: ${error.message}`)
   }
-  
-  console.log('✅ Upload concluído:', data)
 
   const { data: urlData } = supabase.storage
     .from('romaneios-img')
     .getPublicUrl(fileName)
   
-  console.log('🔗 URL pública gerada:', urlData.publicUrl)
   return urlData.publicUrl
 }

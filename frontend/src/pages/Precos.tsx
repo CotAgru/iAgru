@@ -101,7 +101,7 @@ export default function Precos() {
         setForm(prev => ({ ...prev, distancia_km: km.toString() }))
         toast.success(`Distancia calculada: ${km} km`)
       }
-    } catch (err) { console.error('Erro ao calcular distancia:', err) }
+    } catch { toast.error('Erro ao calcular distância') }
     finally { setCalcDist(false) }
   }
 
@@ -140,7 +140,7 @@ export default function Precos() {
       if (editing) { await updatePreco(editing.id, payload); toast.success('Preco atualizado') }
       else { await createPreco(payload); toast.success('Preco cadastrado') }
       setShowForm(false); load()
-    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')); console.error(err) }
+    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')) }
   }
 
   const remove = async (id: string) => {

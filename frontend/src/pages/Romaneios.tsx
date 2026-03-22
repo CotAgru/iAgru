@@ -374,7 +374,6 @@ export default function Romaneios() {
       const base64Data = base64Image.split(',')[1]
       if (!base64Data) { toast.error('Imagem inválida'); return }
       const mimeType = base64Image.split(';')[0].split(':')[1] || 'image/jpeg'
-      console.log('🤖 OCR: Enviando imagem para Gemini...', { mimeType, dataLength: base64Data.length })
       
       const prompt = `Analise esta imagem de um romaneio/ticket de pesagem agrícola brasileiro.
 Extraia os seguintes campos e retorne APENAS um JSON válido (sem markdown, sem comentários, sem blocos de código):
@@ -407,7 +406,6 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       
       if (!resp.ok) {
         const errText = await resp.text()
-        console.error('🤖 OCR: Erro HTTP', resp.status, errText)
         if (resp.status === 429) {
           toast.error('Limite de requisições da API Gemini atingido. Aguarde alguns minutos e tente novamente.')
         } else {
@@ -417,16 +415,13 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       }
       
       const data = await resp.json()
-      console.log('🤖 OCR: Resposta completa:', JSON.stringify(data).substring(0, 500))
       
       if (data.error) {
-        console.error('🤖 OCR: Erro Gemini:', data.error)
         toast.error(`Erro Gemini: ${data.error.message || 'desconhecido'}`)
         return
       }
       
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      console.log('🤖 OCR: Texto extraído:', text.substring(0, 500))
       
       // Limpar markdown code blocks se existirem
       const cleanText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '')
@@ -434,7 +429,6 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       
       if (jsonMatch) {
         const p = JSON.parse(jsonMatch[0])
-        console.log('🤖 OCR: JSON parsed:', p)
         setForm(prev => ({
           ...prev,
           numero_ticket: p.numero_ticket || prev.numero_ticket,
@@ -457,11 +451,9 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
         }))
         toast.success('Dados extraídos com IA!')
       } else {
-        console.error('🤖 OCR: Nenhum JSON encontrado na resposta:', cleanText)
         toast.error('Não foi possível extrair dados da imagem')
       }
     } catch (err: any) {
-      console.error('🤖 OCR: Erro:', err)
       toast.error(`Erro ao processar: ${err.message || 'desconhecido'}`)
     }
     finally { setOcrLoading(false) }
@@ -485,14 +477,13 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
           const publicUrl = await uploadRomaneioImage(imagePreview, editing?.id)
           payload.imagem_url = publicUrl
         } catch (uploadErr: any) {
-          console.error('Erro upload imagem:', uploadErr)
           toast.error('Erro ao enviar imagem. Salvando sem imagem.')
         }
       }
       if (editing) { await updateRomaneio(editing.id, payload); toast.success('Romaneio atualizado') }
       else { await createRomaneio(payload); toast.success('Romaneio cadastrado') }
       setShowForm(false); load()
-    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')); console.error(err) }
+    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')) }
   }
 
   const remove = async (id: string) => {

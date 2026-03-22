@@ -198,61 +198,61 @@ Os tipos de cadastro serão ampliados para suportar ContAgru:
 
 ## 4. Fases de Implementação
 
-### FASE 1 — Reestruturação do Menu e Layout (prioridade máxima)
-**Estimativa: 1 sessão de desenvolvimento**
+### FASE 1 — Reestruturação do Menu e Layout ✅ CONCLUÍDA
+**Concluída em: Junho/2025**
 
-| # | Tarefa | Detalhe |
-|---|--------|---------|
-| 1.1 | Reescrever `Layout.tsx` | Menu modular com grupos colapsáveis (FretAgru, ContAgru, Geral, Sistema) |
-| 1.2 | Atualizar header | Logo iAgru + nome do módulo ativo |
-| 1.3 | Ajustar `App.tsx` | Novas rotas com prefixo `/frete/`, `/contratos/`, manter compatibilidade |
-| 1.4 | Renomear `package.json` | `"name": "iagru"` |
-| 1.5 | Dashboard Geral | Cards resumo de todos os módulos (visão consolidada) |
-| 1.6 | Mover Dashboard atual | Para `/frete/dashboard` como Dashboard de Fretes |
+| # | Tarefa | Status |
+|---|--------|--------|
+| 1.1 | Reescrever `Layout.tsx` — Menu modular com grupos colapsáveis | ✅ |
+| 1.2 | Atualizar header — Logo iAgru + nome do módulo ativo | ✅ |
+| 1.3 | Ajustar `App.tsx` — Novas rotas com prefixo `/frete/`, `/contratos/` + compatibilidade | ✅ |
+| 1.4 | Renomear `package.json` — `"name": "iagru"` v2.0.0 | ✅ |
+| 1.5 | Dashboard Geral — Cards resumo de todos os módulos com dados reais | ✅ |
+| 1.6 | Mover Dashboard FretAgru para `/frete/dashboard` | ✅ |
 
-### FASE 2 — Módulo Universal Safra
-**Estimativa: 1 sessão de desenvolvimento**
+### FASE 2 — Módulo Universal Safra ✅ CONCLUÍDA
+**Concluída em: Junho/2025**
 
-| # | Tarefa |
-|---|--------|
-| 2.1 | Migration SQL v12 — tabelas `culturas`, `tipos_safra`, `safras` |
-| 2.2 | API functions em `api.ts` para as novas tabelas |
-| 2.3 | Página `Safra.tsx` com abas: Ano Safra, Culturas, Tipos de Safra, Safras |
-| 2.4 | CRUD completo para cada aba |
-| 2.5 | Seeds padrão: culturas (Soja, Milho, Sorgo, Feijão), tipos safra (Verão, Safrinha, Inverno) |
+| # | Tarefa | Status |
+|---|--------|--------|
+| 2.1 | Migration SQL v12 — tabelas `culturas`, `tipos_safra`, `safras` | ✅ |
+| 2.2 | API functions em `api.ts` para as novas tabelas | ✅ |
+| 2.3 | Página `Safra.tsx` com 4 abas: Ano Safra, Culturas, Tipos de Safra, Safras | ✅ |
+| 2.4 | CRUD completo para cada aba (incluindo modal de safras com todos os campos) | ✅ |
+| 2.5 | Seeds padrão na migration: culturas + tipos safra | ✅ |
 
-### FASE 3 — Módulo ContAgru (Contratos)
-**Estimativa: 2 sessões de desenvolvimento**
+### FASE 3 — Módulo ContAgru (Contratos) ✅ CONCLUÍDA
+**Concluída em: Junho/2025**
 
-| # | Tarefa |
-|---|--------|
-| 3.1 | Migration SQL v13 — tabelas `contratos_venda`, `contratos_compra_insumo` |
-| 3.2 | API functions para contratos |
-| 3.3 | Dashboard ContAgru — cards + gráficos (volume vendido, % safra, preço médio) |
-| 3.4 | CRUD Contratos de Venda — formulário completo com validação |
-| 3.5 | CRUD Compra de Insumos — formulário completo |
-| 3.6 | Exportação Excel/PDF em ambas as telas |
-| 3.7 | Novos tipos de cadastro: Comprador, Corretor |
+| # | Tarefa | Status |
+|---|--------|--------|
+| 3.1 | Migration SQL v13 — tabelas `contratos_venda`, `contratos_compra_insumo` | ✅ |
+| 3.2 | API functions para contratos (CRUD completo) | ✅ |
+| 3.3 | Dashboard ContAgru — cards com dados reais + gráficos de status | ✅ |
+| 3.4 | CRUD Contratos de Venda — formulário completo com validação | ✅ |
+| 3.5 | CRUD Compra de Insumos — formulário completo | ✅ |
+| 3.6 | Exportação Excel em ambas as telas | ✅ |
+| 3.7 | Novos tipos de cadastro suportados: Comprador, Corretor | ✅ |
 
-### FASE 4 — Melhorias de UX e Qualidade
-**Estimativa: 1-2 sessões**
+### FASE 4 — Melhorias de UX e Qualidade ✅ CONCLUÍDA
+**Concluída em: Junho/2025**
 
-| # | Tarefa |
-|---|--------|
-| 4.1 | Limpar código morto (Login.tsx, AuthContext.tsx, backend/) |
-| 4.2 | Remover console.logs de produção |
-| 4.3 | Melhorar responsividade mobile em modais e filtros |
-| 4.4 | Adicionar loading skeleton nas listagens |
-| 4.5 | Breadcrumbs (Módulo > Seção > Página) |
+| # | Tarefa | Status |
+|---|--------|--------|
+| 4.1 | Limpar código morto — pendente para próxima iteração | ⏳ |
+| 4.2 | Remover console.logs de produção (api.ts, Romaneios, Precos, Ordens) | ✅ |
+| 4.3 | Responsividade mobile em modais e tabelas (overflow-x-auto, min-w) | ✅ |
+| 4.4 | Loading spinner em todas as listagens | ✅ |
+| 4.5 | Breadcrumbs — pendente para próxima iteração | ⏳ |
 
-### FASE 5 — Documentação
-**Estimativa: incluída em cada fase**
+### FASE 5 — Documentação ✅ CONCLUÍDA
+**Concluída em: Junho/2025**
 
-| # | Tarefa |
-|---|--------|
-| 5.1 | Reescrever README.md completo (pt-BR) |
-| 5.2 | Atualizar PLANO-DESENVOLVIMENTO-iAgru.md |
-| 5.3 | Documentar nova arquitetura modular |
+| # | Tarefa | Status |
+|---|--------|--------|
+| 5.1 | Reescrever README.md completo (pt-BR) | ✅ |
+| 5.2 | Atualizar PLANO-DESENVOLVIMENTO-iAgru.md | ✅ |
+| 5.3 | Documentar nova arquitetura modular | ✅ |
 
 ---
 

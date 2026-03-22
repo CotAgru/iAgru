@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Truck, FileSignature, Users, Package, Loader2, ArrowRight, FileText, ClipboardList, Scale, DollarSign, ShoppingCart } from 'lucide-react'
-import { getCadastros, getVeiculos, getProdutos, getPrecos, getOrdens, getRomaneios, getOperacoes } from '../services/api'
-import { fmtInt, fmtDec } from '../utils/format'
+import { getCadastros, getVeiculos, getProdutos, getPrecos, getOrdens, getRomaneios, getOperacoes, getContratosVenda, getComprasInsumo } from '../services/api'
+import { fmtInt, fmtDec, fmtBRL } from '../utils/format'
 
 export default function DashboardGeral() {
   const [loading, setLoading] = useState(true)
@@ -13,6 +13,8 @@ export default function DashboardGeral() {
   const [ordens, setOrdens] = useState<any[]>([])
   const [romaneios, setRomaneios] = useState<any[]>([])
   const [operacoes, setOperacoes] = useState<any[]>([])
+  const [contratosVenda, setContratosVenda] = useState<any[]>([])
+  const [comprasInsumo, setComprasInsumo] = useState<any[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -23,9 +25,12 @@ export default function DashboardGeral() {
       getOrdens().catch(() => []),
       getRomaneios().catch(() => []),
       getOperacoes().catch(() => []),
-    ]).then(([c, v, p, pr, o, r, ops]) => {
+      getContratosVenda().catch(() => []),
+      getComprasInsumo().catch(() => []),
+    ]).then(([c, v, p, pr, o, r, ops, cv, ci]) => {
       setCadastros(c); setVeiculos(v); setProdutos(p); setPrecos(pr)
       setOrdens(o); setRomaneios(r); setOperacoes(ops)
+      setContratosVenda(cv); setComprasInsumo(ci)
       setLoading(false)
     })
   }, [])
@@ -33,6 +38,14 @@ export default function DashboardGeral() {
   const pesoTotal = useMemo(() =>
     romaneios.reduce((acc: number, r: any) => acc + (r.peso_liquido || 0), 0)
   , [romaneios])
+
+  const volumeVendido = useMemo(() =>
+    contratosVenda.reduce((s: number, v: any) => s + (v.volume_tons || 0), 0)
+  , [contratosVenda])
+
+  const valorTotalVendas = useMemo(() =>
+    contratosVenda.reduce((s: number, v: any) => s + ((v.volume_tons || 0) * (v.preco_valor || 0)), 0)
+  , [contratosVenda])
 
   if (loading) {
     return (
@@ -68,10 +81,10 @@ export default function DashboardGeral() {
       lightColor: 'bg-blue-50 border-blue-200',
       link: '/contratos/dashboard',
       stats: [
-        { label: 'Contratos Venda', value: '0', icon: ShoppingCart },
-        { label: 'Compra Insumos', value: '0', icon: Package },
-        { label: 'Volume (ton)', value: '0', icon: Scale },
-        { label: 'Valor Total', value: 'R$ 0', icon: DollarSign },
+        { label: 'Contratos Venda', value: fmtInt(contratosVenda.length), icon: ShoppingCart },
+        { label: 'Compra Insumos', value: fmtInt(comprasInsumo.length), icon: Package },
+        { label: 'Volume (ton)', value: fmtDec(volumeVendido, 1), icon: Scale },
+        { label: 'Valor Total', value: fmtBRL(valorTotalVendas), icon: DollarSign },
       ],
     },
   ]

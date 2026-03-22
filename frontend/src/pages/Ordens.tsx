@@ -217,7 +217,7 @@ export default function Ordens() {
         await loadOrdemTransps(result.id)
       }
       load()
-    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')); console.error(err) }
+    } catch (err: any) { toast.error('Erro ao salvar: ' + (err?.message || '')) }
   }
 
   // Ao selecionar transportadora, carregar seus motoristas/placas automaticamente
