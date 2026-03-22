@@ -21,10 +21,18 @@ interface Cadastro {
   cpf_cnpj: string | null
   nome: string
   nome_fantasia: string | null
+  apelido: string | null
+  tipo_pessoa: 'fisica' | 'juridica' | 'estrangeira'
   telefone1: string | null
   telefone2: string | null
   uf: string
   cidade: string
+  cep: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  inscricao_estadual: string | null
   tipos: string[]
   latitude: number | null
   longitude: number | null
@@ -37,8 +45,11 @@ interface UF { id: number; sigla: string; nome: string }
 interface Cidade { id: number; nome: string }
 
 const emptyForm = {
-  cpf_cnpj: '', nome: '', nome_fantasia: '', telefone1: '', telefone2: '',
-  uf: 'GO', cidade: '', tipos: [] as string[],
+  cpf_cnpj: '', nome: '', nome_fantasia: '', apelido: '', tipo_pessoa: 'juridica' as 'fisica' | 'juridica' | 'estrangeira',
+  telefone1: '', telefone2: '',
+  uf: 'GO', cidade: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '',
+  inscricao_estadual: '',
+  tipos: [] as string[],
   latitude: null as number | null, longitude: null as number | null,
   observacoes: '', transportador_id: '', ativo: true,
 }
@@ -224,12 +235,17 @@ export default function Cadastros() {
     setEditing(item)
     setForm({
       cpf_cnpj: item.cpf_cnpj || '', nome: item.nome, nome_fantasia: item.nome_fantasia || '',
+      apelido: item.apelido || '', tipo_pessoa: item.tipo_pessoa || 'juridica',
       telefone1: item.telefone1 || '', telefone2: item.telefone2 || '',
-      uf: item.uf, cidade: item.cidade, tipos: item.tipos || [],
+      uf: item.uf, cidade: item.cidade,
+      cep: item.cep || '', logradouro: item.logradouro || '', numero: item.numero || '',
+      complemento: item.complemento || '', bairro: item.bairro || '',
+      inscricao_estadual: item.inscricao_estadual || '',
+      tipos: item.tipos || [],
       latitude: item.latitude, longitude: item.longitude,
       observacoes: item.observacoes || '', transportador_id: item.transportador_id || '', ativo: item.ativo,
     })
-    setSavedMotoristaId(item.id)
+    setSavedMotoristaId(null)
     setShowForm(true)
   }
 
@@ -556,6 +572,34 @@ export default function Cadastros() {
                 </div>
               )}
 
+              {/* Apelido */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Apelido</label>
+                <input type="text" value={form.apelido} onChange={e => setForm({...form, apelido: e.target.value})}
+                  placeholder="Nome usado para identificação e busca"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                <p className="text-xs text-gray-500 mt-1">Como este cadastro aparecerá nas buscas (se vazio, usa Nome Fantasia ou Nome)</p>
+              </div>
+
+              {/* Tipo Pessoa + Inscrição Estadual */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Pessoa</label>
+                  <select value={form.tipo_pessoa} onChange={e => setForm({...form, tipo_pessoa: e.target.value as 'fisica' | 'juridica' | 'estrangeira'})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <option value="fisica">Física</option>
+                    <option value="juridica">Jurídica</option>
+                    <option value="estrangeira">Estrangeira</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Inscrição Estadual</label>
+                  <input type="text" value={form.inscricao_estadual} onChange={e => setForm({...form, inscricao_estadual: e.target.value})}
+                    placeholder="IE (se aplicável)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+              </div>
+
               {/* Telefones */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -593,6 +637,43 @@ export default function Cadastros() {
                       {cidades.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                     </select>
                   )}
+                </div>
+              </div>
+
+              {/* Endereço Completo */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                  <input type="text" value={form.cep} onChange={e => setForm({...form, cep: e.target.value})}
+                    placeholder="00000-000"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
+                  <input type="text" value={form.logradouro} onChange={e => setForm({...form, logradouro: e.target.value})}
+                    placeholder="Rua, Avenida, etc"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+                  <input type="text" value={form.numero} onChange={e => setForm({...form, numero: e.target.value})}
+                    placeholder="123"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+                  <input type="text" value={form.bairro} onChange={e => setForm({...form, bairro: e.target.value})}
+                    placeholder="Centro, etc"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                  <input type="text" value={form.complemento} onChange={e => setForm({...form, complemento: e.target.value})}
+                    placeholder="Sala 101, Bloco A"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
               </div>
 

@@ -695,7 +695,13 @@ export default function Integracoes() {
       name: s.iagruNome.trim(),
       tradeName: (s.iagruNomeFantasia?.trim() || s.iagruNome.trim()), // Apelido obrigatório - usa nome_fantasia ou nome
       legalName: s.iagruNome.trim(), // Nome legal/razão social
-      types: ['PROVIDER'], // Fornecedor por padrão
+      types: ['PROVIDER'], // Fornecedor por padrão (fixo no Aegro)
+    }
+    
+    // Tipos iAgru → observations (formato: #TipoCadastro - Motorista;Fornecedor;)
+    if (s.iagruTipos && s.iagruTipos.length > 0) {
+      const tiposStr = s.iagruTipos.join(';')
+      payload.observations = `#TipoCadastro - ${tiposStr};`
     }
     
     // fiscalNumber (CPF/CNPJ) - objeto
