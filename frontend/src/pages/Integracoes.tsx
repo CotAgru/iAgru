@@ -478,10 +478,10 @@ export default function Integracoes() {
 
       {/* ========== MODAL MAPEAMENTO DE/PARA ========== */}
       {showMapModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 my-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-2 px-2">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[95vw] xl:max-w-6xl my-2 flex flex-col max-h-[96vh]">
             {/* Header do modal */}
-            <div className="flex items-center justify-between p-5 border-b">
+            <div className="flex items-center justify-between p-4 border-b shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-gray-800">Importar Safras — Mapeamento De/Para</h2>
                 <p className="text-sm text-gray-500 mt-0.5">Vincule os dados do Aegro aos campos da iAgru antes de importar</p>
@@ -499,7 +499,7 @@ export default function Integracoes() {
             ) : (
               <>
                 {/* Atalhos — Criar novos itens + aplicar a todos */}
-                <div className="p-4 bg-gray-50 border-b">
+                <div className="p-3 bg-gray-50 border-b shrink-0">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Criar novos itens auxiliares (se necessário)</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="flex gap-1">
@@ -521,43 +521,43 @@ export default function Integracoes() {
                 </div>
 
                 {/* Tabela de mapeamento */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                <div className="overflow-auto flex-1 min-h-0">
+                  <table className="w-full text-sm min-w-[900px]">
                     <thead className="bg-gray-100 sticky top-0">
                       <tr>
-                        <th className="px-3 py-2 text-left w-10">
+                        <th className="px-2 py-2 text-left w-8">
                           <input type="checkbox" checked={cropMappings.every(m => m.selected)} onChange={e => setCropMappings(prev => prev.map(m => ({ ...m, selected: e.target.checked })))}
                             className="rounded border-gray-300" />
                         </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Aegro — Nome da Safra</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Aegro — Type</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Período</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Área (ha)</th>
-                        <th className="px-3 py-2 text-center text-xs text-gray-400"><ArrowRight className="w-4 h-4 mx-auto" /></th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">
-                          Cultura *
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">Nome da Safra</th>
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">Type</th>
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">Período</th>
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">Área</th>
+                        <th className="px-1 py-2 text-center text-xs text-gray-400 w-6"><ArrowRight className="w-3 h-3 mx-auto" /></th>
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-green-700 min-w-[130px]">
+                          <div>Cultura *</div>
                           {culturas.length > 0 && (
-                            <select className="ml-1 text-xs border rounded px-1 py-0.5 font-normal text-gray-500"
+                            <select className="mt-0.5 text-[11px] border rounded px-1 py-0.5 font-normal text-gray-500 w-full"
                               onChange={e => { if (e.target.value) applyToAll('culturaId', e.target.value); e.target.value = '' }}>
                               <option value="">aplicar a todos</option>
                               {culturas.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                             </select>
                           )}
                         </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">
-                          Tipo Safra
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-green-700 min-w-[130px]">
+                          <div>Tipo Safra</div>
                           {tiposSafra.length > 0 && (
-                            <select className="ml-1 text-xs border rounded px-1 py-0.5 font-normal text-gray-500"
+                            <select className="mt-0.5 text-[11px] border rounded px-1 py-0.5 font-normal text-gray-500 w-full"
                               onChange={e => { if (e.target.value) applyToAll('tipoSafraId', e.target.value); e.target.value = '' }}>
                               <option value="">aplicar a todos</option>
                               {tiposSafra.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                             </select>
                           )}
                         </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-green-700">
-                          Ano Safra *
+                        <th className="px-2 py-2 text-left text-xs font-semibold text-green-700 min-w-[110px]">
+                          <div>Ano Safra *</div>
                           {anosSafra.length > 0 && (
-                            <select className="ml-1 text-xs border rounded px-1 py-0.5 font-normal text-gray-500"
+                            <select className="mt-0.5 text-[11px] border rounded px-1 py-0.5 font-normal text-gray-500 w-full"
                               onChange={e => { if (e.target.value) applyToAll('anoSafraId', e.target.value); e.target.value = '' }}>
                               <option value="">aplicar a todos</option>
                               {anosSafra.map((a: any) => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -571,12 +571,12 @@ export default function Integracoes() {
                         const hasError = m.selected && (!m.culturaId || !m.anoSafraId)
                         return (
                           <tr key={m.cropKey} className={`${hasError ? 'bg-red-50' : m.selected ? 'bg-white' : 'bg-gray-50 opacity-60'} hover:bg-green-50/30`}>
-                            <td className="px-3 py-2">
+                            <td className="px-2 py-1.5">
                               <input type="checkbox" checked={m.selected} onChange={e => updateMapping(idx, 'selected', e.target.checked)}
                                 className="rounded border-gray-300" />
                             </td>
-                            <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{m.cropName}</td>
-                            <td className="px-3 py-2">
+                            <td className="px-2 py-1.5 font-medium text-gray-800 text-xs whitespace-nowrap">{m.cropName}</td>
+                            <td className="px-2 py-1.5">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                                 {m.aegroType || '—'}
                               </span>
@@ -584,29 +584,29 @@ export default function Integracoes() {
                                 <span className="text-xs text-gray-400 ml-1">({AEGRO_TYPE_MAP[m.aegroType.toLowerCase()]})</span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                            <td className="px-2 py-1.5 text-[11px] text-gray-500 whitespace-nowrap">
                               {m.startDate ? fmtData(m.startDate) : '—'} {m.endDate ? `→ ${fmtData(m.endDate)}` : ''}
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-600">{m.areaHa != null ? `${m.areaHa.toLocaleString('pt-BR')} ha` : '—'}</td>
-                            <td className="px-3 py-2 text-center"><ArrowRight className="w-4 h-4 text-green-500 mx-auto" /></td>
-                            <td className="px-3 py-2">
+                            <td className="px-2 py-1.5 text-xs text-gray-600 whitespace-nowrap">{m.areaHa != null ? `${m.areaHa.toLocaleString('pt-BR')} ha` : '—'}</td>
+                            <td className="px-1 py-1.5 text-center"><ArrowRight className="w-3 h-3 text-green-500 mx-auto" /></td>
+                            <td className="px-2 py-1.5">
                               <select value={m.culturaId} onChange={e => updateMapping(idx, 'culturaId', e.target.value)}
-                                className={`w-full px-2 py-1 border rounded text-sm ${!m.culturaId && m.selected ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                                <option value="">— Selecione —</option>
+                                className={`w-full px-1.5 py-1 border rounded text-xs ${!m.culturaId && m.selected ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                                <option value="">Selecione</option>
                                 {culturas.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                               </select>
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-2 py-1.5">
                               <select value={m.tipoSafraId} onChange={e => updateMapping(idx, 'tipoSafraId', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                <option value="">— Opcional —</option>
+                                className="w-full px-1.5 py-1 border border-gray-300 rounded text-xs">
+                                <option value="">Opcional</option>
                                 {tiposSafra.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                               </select>
                             </td>
-                            <td className="px-3 py-2">
+                            <td className="px-2 py-1.5">
                               <select value={m.anoSafraId} onChange={e => updateMapping(idx, 'anoSafraId', e.target.value)}
-                                className={`w-full px-2 py-1 border rounded text-sm ${!m.anoSafraId && m.selected ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                                <option value="">— Selecione —</option>
+                                className={`w-full px-1.5 py-1 border rounded text-xs ${!m.anoSafraId && m.selected ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                                <option value="">Selecione</option>
                                 {anosSafra.map((a: any) => <option key={a.id} value={a.id}>{a.nome}</option>)}
                               </select>
                             </td>
@@ -618,7 +618,7 @@ export default function Integracoes() {
                 </div>
 
                 {/* Footer do modal */}
-                <div className="flex items-center justify-between p-4 border-t bg-gray-50 rounded-b-xl">
+                <div className="flex items-center justify-between p-3 border-t bg-gray-50 rounded-b-xl shrink-0">
                   <p className="text-sm text-gray-500">
                     {cropMappings.filter(m => m.selected).length} de {cropMappings.length} safras selecionadas
                     {cropMappings.filter(m => m.selected && (!m.culturaId || !m.anoSafraId)).length > 0 && (
