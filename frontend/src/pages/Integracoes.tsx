@@ -235,7 +235,7 @@ export default function Integracoes() {
   const handleCreateCultura = async () => {
     if (!newCultura.trim()) return
     try {
-      const created = await createCultura({ nome: newCultura.trim() })
+      const created = await createCultura({ nome: newCultura.trim(), tipo_cadastro: 'api', origem_cadastro: 'aegro' })
       setCulturas(prev => [...prev, created])
       setNewCultura('')
       toast.success(`Cultura "${created.nome}" criada`)
@@ -245,7 +245,7 @@ export default function Integracoes() {
   const handleCreateTipoSafra = async () => {
     if (!newTipoSafra.trim()) return
     try {
-      const created = await createTipoSafra({ nome: newTipoSafra.trim() })
+      const created = await createTipoSafra({ nome: newTipoSafra.trim(), tipo_cadastro: 'api', origem_cadastro: 'aegro' })
       setTiposSafra(prev => [...prev, created])
       setNewTipoSafra('')
       toast.success(`Tipo "${created.nome}" criado`)
@@ -255,7 +255,7 @@ export default function Integracoes() {
   const handleCreateAnoSafra = async () => {
     if (!newAnoSafra.trim()) return
     try {
-      const created = await createAnoSafra({ nome: newAnoSafra.trim() })
+      const created = await createAnoSafra({ nome: newAnoSafra.trim(), tipo_cadastro: 'api', origem_cadastro: 'aegro' })
       setAnosSafra(prev => [...prev, created])
       setNewAnoSafra('')
       toast.success(`Ano safra "${created.nome}" criado`)
@@ -298,6 +298,8 @@ export default function Integracoes() {
           area_ha: m.areaHa,
           observacoes: `Importado do Aegro (${m.cropKey})`,
           ativo: true,
+          tipo_cadastro: 'api',
+          origem_cadastro: 'aegro',
         }
         await upsertSafraFromAegro(m.cropKey, payload)
         count++
