@@ -156,6 +156,36 @@ export default function CompraInsumos() {
     }
   }
 
+  const deleteFile = async () => {
+    if (!form.arquivo_url) return
+    
+    if (!confirm('Deseja remover o arquivo anexado?')) return
+    
+    try {
+      // Extrair nome do arquivo da URL
+      const urlParts = form.arquivo_url.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+      
+      const resp = await fetch('/api/delete-file', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket: 'contratosdecompra-img', fileName })
+      })
+      
+      if (!resp.ok) {
+        const data = await resp.json()
+        throw new Error(data.error || 'Erro ao remover arquivo')
+      }
+      
+      // Limpar URL do arquivo no formulário
+      setForm(prev => ({ ...prev, arquivo_url: '' }))
+      toast.success('Arquivo removido com sucesso!')
+    } catch (err: any) {
+      console.error('Erro ao remover arquivo:', err)
+      toast.error(`Erro ao remover arquivo: ${err?.message || 'Erro desconhecido'}`)
+    }
+  }
+
   const save = async () => {
     if (!form.fornecedor_id || !form.produto_id || !form.quantidade || !form.valor_unitario) {
       toast.error('Fornecedor, Produto, Quantidade e Valor Unitário são obrigatórios'); return
@@ -518,10 +548,16 @@ export default function CompraInsumos() {
                           <FileText className="w-5 h-5 text-green-600" />
                           <span className="text-sm text-green-800 font-medium">Arquivo anexado</span>
                         </div>
-                        <a href={form.arquivo_url} target="_blank" rel="noopener noreferrer" 
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-1">
-                          <Eye className="w-3.5 h-3.5" /> Ver
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a href={form.arquivo_url} target="_blank" rel="noopener noreferrer" 
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" /> Ver
+                          </a>
+                          <button onClick={deleteFile} 
+                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors flex items-center gap-1">
+                            <Trash2 className="w-3.5 h-3.5" /> Excluir
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
