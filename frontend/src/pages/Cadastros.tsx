@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos, getTiposCaminhao } from '../services/api'
 import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 import ViewModal, { Field } from '../components/ViewModal'
+import SearchableSelect from '../components/SearchableSelect'
 import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtInt } from '../utils/format'
@@ -652,12 +653,8 @@ export default function Cadastros() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Pessoa</label>
-                  <select value={form.tipo_pessoa} onChange={e => setForm({...form, tipo_pessoa: e.target.value as 'fisica' | 'juridica' | 'estrangeira'})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    <option value="fisica">Física</option>
-                    <option value="juridica">Jurídica</option>
-                    <option value="estrangeira">Estrangeira</option>
-                  </select>
+                  <SearchableSelect value={form.tipo_pessoa} onChange={val => setForm({...form, tipo_pessoa: val as 'fisica' | 'juridica' | 'estrangeira'})}
+                    options={[{ value: 'fisica', label: 'Física' }, { value: 'juridica', label: 'Jurídica' }, { value: 'estrangeira', label: 'Estrangeira' }]} placeholder="Tipo Pessoa" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Inscrição Estadual</label>
@@ -687,29 +684,23 @@ export default function Cadastros() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">UF *</label>
-                  <select value={form.uf} onChange={e => setForm({...form, uf: e.target.value, cidade: '', codigo_ibge: ''})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    <option value="">Selecione...</option>
-                    {ufs.map(u => <option key={u.sigla} value={u.sigla}>{u.sigla} - {u.nome}</option>)}
-                  </select>
+                  <SearchableSelect value={form.uf} onChange={val => setForm({...form, uf: val, cidade: '', codigo_ibge: ''})}
+                    options={[{ value: '', label: 'Selecione...' }, ...ufs.map(u => ({ value: u.sigla, label: `${u.sigla} - ${u.nome}` }))]} placeholder="UF" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cidade *</label>
                   {loadingCidades ? (
                     <div className="flex items-center gap-2 px-3 py-2 text-gray-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando...</div>
                   ) : (
-                    <select value={form.cidade} onChange={e => {
-                      const cidadeSelecionada = cidades.find(c => c.nome === e.target.value)
+                    <SearchableSelect value={form.cidade} onChange={val => {
+                      const cidadeSelecionada = cidades.find(c => c.nome === val)
                       setForm({
                         ...form, 
-                        cidade: e.target.value,
+                        cidade: val,
                         codigo_ibge: cidadeSelecionada ? String(cidadeSelecionada.id) : ''
                       })
                     }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                      <option value="">Selecione...</option>
-                      {cidades.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
-                    </select>
+                      options={[{ value: '', label: 'Selecione...' }, ...cidades.map(c => ({ value: c.nome, label: c.nome }))]} placeholder="Cidade" />
                   )}
                 </div>
                 <div>
@@ -827,11 +818,8 @@ export default function Cadastros() {
               {mostraMotorista && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Transportadora (vinculo)</label>
-                  <select value={form.transportador_id} onChange={e => setForm({...form, transportador_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    <option value="">Autonomo (sem transportadora)</option>
-                    {transportadorasList.map(t => <option key={t.id} value={t.id}>{t.nome_fantasia || t.nome}</option>)}
-                  </select>
+                  <SearchableSelect value={form.transportador_id} onChange={val => setForm({...form, transportador_id: val})}
+                    options={[{ value: '', label: 'Autônomo (sem transportadora)' }, ...transportadorasList.map(t => ({ value: t.id, label: t.nome_fantasia || t.nome }))]} placeholder="Transportadora" />
                 </div>
               )}
 
@@ -905,10 +893,8 @@ export default function Cadastros() {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Caminhao *</label>
-                          <select value={veiculoForm.tipo_caminhao} onChange={e => onVeiculoTipoChange(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            {tiposCaminhao.map((t: any) => <option key={t.nome} value={t.nome}>{t.nome} ({t.eixos} eixos - {fmtInt(t.peso_pauta_kg)} kg)</option>)}
-                          </select>
+                          <SearchableSelect value={veiculoForm.tipo_caminhao} onChange={val => onVeiculoTipoChange(val)}
+                            options={tiposCaminhao.map((t: any) => ({ value: t.nome, label: `${t.nome} (${t.eixos} eixos - ${fmtInt(t.peso_pauta_kg)} kg)` }))} placeholder="Tipo Caminhão" />
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
