@@ -632,7 +632,14 @@ export default function Cadastros() {
                   {loadingCidades ? (
                     <div className="flex items-center gap-2 px-3 py-2 text-gray-400 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Carregando...</div>
                   ) : (
-                    <select value={form.cidade} onChange={e => setForm({...form, cidade: e.target.value})}
+                    <select value={form.cidade} onChange={e => {
+                      const cidadeSelecionada = cidades.find(c => c.nome === e.target.value)
+                      setForm({
+                        ...form, 
+                        cidade: e.target.value,
+                        codigo_ibge: cidadeSelecionada ? String(cidadeSelecionada.id) : ''
+                      })
+                    }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                       <option value="">Selecione...</option>
                       {cidades.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
