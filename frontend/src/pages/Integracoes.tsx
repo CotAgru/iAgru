@@ -529,6 +529,12 @@ export default function Integracoes() {
       const cadastros: any[] = cadastrosData || []
       const companies: any[] = companiesData?.items || (Array.isArray(companiesData) ? companiesData : [])
 
+      // Extrair CPF/CNPJ do objeto fiscalNumber do Aegro e normalizar companies
+      const normalizedCompanies = companies.map(co => ({
+        ...co,
+        cpfCnpj: co.fiscalNumber?.code || co.cpfCnpj || null
+      }))
+
       // Mapa por CPF/CNPJ (normalizado, sem pontuação)
       const cadByCnpj = new Map<string, any>()
       const cadByName = new Map<string, any>()
@@ -546,7 +552,7 @@ export default function Integracoes() {
       // 1. Cadastros já vinculados (têm aegro_company_key)
       for (const cad of cadastros) {
         if (cad.aegro_company_key) {
-          const aegroMatch = companies.find((co: any) => co.key === cad.aegro_company_key)
+          const aegroMatch = normalizedCompanies.find((co: any) => co.key === cad.aegro_company_key)
           syncs.push({
             aegroKey: cad.aegro_company_key,
             aegroName: aegroMatch?.name || null,
@@ -575,7 +581,7 @@ export default function Integracoes() {
       }
 
       // 2. Tentar matching por CPF/CNPJ e nome para os não vinculados
-      for (const co of companies) {
+      for (const co of normalizedCompanies) {
         if (usedAegroKeys.has(co.key)) continue
         const cnpj = normCnpj(co.cpfCnpj)
         let matchedCad: any = null
@@ -743,8 +749,15 @@ export default function Integracoes() {
     
     // contact - objeto (se tiver telefone)
     if (s.iagruTelefone?.trim()) {
-      const phone = s.iagruTelefone.replace(/\D/g, '')
-      payload.contact = { phone }
+      let phone = s.iagruTelefone.replace(/\D/g, '')
+      // Aegro aceita EXATAMENTE 10 dígitos. Se for celular (11 dígitos com 9 na frente), remover o 9
+      if (phone.length === 11 && phone[2] === '9') {
+        phone = phone.substring(0, 2) + phone.substring(3) // Remove o 9º dígito (3ª posição)
+      }
+      // Só enviar se tiver 10 dígitos
+      if (phone.length === 10) {
+        payload.contact = { phone }
+      }
     }
 
     setPreviewData({ idx, sync: s, payload })
@@ -797,6 +810,19 @@ export default function Integracoes() {
     if (!s.aegroKey) return
     setCompanySyncs(prev => prev.map((item, i) => i === idx ? { ...item, processing: true } : item))
     try {
+      // Buscar código IBGE pela cidade+UF se tiver ambos
+      let codigoIbge = null
+      if (s.aegroState && s.aegroCity) {
+        try {
+          const resp = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${s.aegroState}/municipios?orderBy=nome`)
+          if (resp.ok) {
+            const cidades = await resp.json()
+            const cidadeMatch = cidades.find((c: any) => c.nome === s.aegroCity)
+            if (cidadeMatch) codigoIbge = String(cidadeMatch.id)
+          }
+        } catch {}
+      }
+
       const payload = {
         nome: s.aegroName || '',
         nome_fantasia: s.aegroTradeName || null,
@@ -804,6 +830,7 @@ export default function Integracoes() {
         telefone1: s.aegroPhone || null,
         uf: s.aegroState || 'GO',
         cidade: s.aegroCity || '',
+        codigo_ibge: codigoIbge,
         tipos: ['Fornecedor'],
         ativo: true,
         aegro_company_key: s.aegroKey,

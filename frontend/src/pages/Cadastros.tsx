@@ -648,9 +648,10 @@ export default function Cadastros() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Código IBGE</label>
-                  <input type="text" value={form.codigo_ibge} onChange={e => setForm({...form, codigo_ibge: e.target.value})}
-                    placeholder="Ex: 5205109"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  <input type="text" value={form.codigo_ibge} readOnly
+                    placeholder="Preenchido automaticamente"
+                    title="Preenchido automaticamente ao selecionar a cidade"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" />
                 </div>
               </div>
 
