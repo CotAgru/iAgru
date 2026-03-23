@@ -36,6 +36,7 @@ interface CompanySync {
   iagruTelefone: string | null
   iagruUf: string | null
   iagruCidade: string | null
+  iagruCodigoIbge: string | null
   iagruTipos: string[]
   // Status
   status: SyncStatus
@@ -562,6 +563,7 @@ export default function Integracoes() {
             iagruTelefone: cad.telefone1,
             iagruUf: cad.uf,
             iagruCidade: cad.cidade,
+            iagruCodigoIbge: cad.codigo_ibge,
             iagruTipos: cad.tipos || [],
             status: 'linked',
             matchField: 'aegro_company_key',
@@ -609,6 +611,7 @@ export default function Integracoes() {
             iagruTelefone: matchedCad.telefone1,
             iagruUf: matchedCad.uf,
             iagruCidade: matchedCad.cidade,
+            iagruCodigoIbge: matchedCad.codigo_ibge,
             iagruTipos: matchedCad.tipos || [],
             status: 'match_suggestion',
             matchField,
@@ -628,7 +631,7 @@ export default function Integracoes() {
             aegroCity: co.city || null,
             aegroRaw: co,
             iagruId: null, iagruNome: null, iagruNomeFantasia: null,
-            iagruCpfCnpj: null, iagruTelefone: null, iagruUf: null, iagruCidade: null, iagruTipos: [],
+            iagruCpfCnpj: null, iagruTelefone: null, iagruUf: null, iagruCidade: null, iagruCodigoIbge: null, iagruTipos: [],
             status: 'only_aegro',
             matchField: null,
             processing: false, done: false, error: null,
@@ -650,6 +653,7 @@ export default function Integracoes() {
           iagruTelefone: cad.telefone1,
           iagruUf: cad.uf,
           iagruCidade: cad.cidade,
+          iagruCodigoIbge: cad.codigo_ibge,
           iagruTipos: cad.tipos || [],
           status: 'only_iagru',
           matchField: null,
@@ -730,6 +734,10 @@ export default function Integracoes() {
       }
       if (s.iagruCidade?.trim()) {
         payload.address.city = { name: s.iagruCidade.trim() }
+        // Código IBGE obrigatório no Aegro quando envia cidade
+        if (s.iagruCodigoIbge?.trim()) {
+          payload.address.city.ibgeCode = s.iagruCodigoIbge.trim()
+        }
       }
     }
     

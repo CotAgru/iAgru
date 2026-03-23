@@ -11,6 +11,7 @@ ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS logradouro TEXT;
 ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS numero TEXT;
 ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS complemento TEXT;
 ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS bairro TEXT;
+ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS codigo_ibge TEXT; -- Código IBGE da cidade (obrigatório no Aegro)
 
 -- Inscrição estadual
 ALTER TABLE cadastros ADD COLUMN IF NOT EXISTS inscricao_estadual TEXT;

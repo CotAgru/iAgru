@@ -27,6 +27,7 @@ interface Cadastro {
   telefone2: string | null
   uf: string
   cidade: string
+  codigo_ibge: string | null
   cep: string | null
   logradouro: string | null
   numero: string | null
@@ -47,7 +48,7 @@ interface Cidade { id: number; nome: string }
 const emptyForm = {
   cpf_cnpj: '', nome: '', nome_fantasia: '', apelido: '', tipo_pessoa: 'juridica' as 'fisica' | 'juridica' | 'estrangeira',
   telefone1: '', telefone2: '',
-  uf: 'GO', cidade: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '',
+  uf: 'GO', cidade: '', codigo_ibge: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '',
   inscricao_estadual: '',
   tipos: [] as string[],
   latitude: null as number | null, longitude: null as number | null,
@@ -237,7 +238,7 @@ export default function Cadastros() {
       cpf_cnpj: item.cpf_cnpj || '', nome: item.nome, nome_fantasia: item.nome_fantasia || '',
       apelido: item.apelido || '', tipo_pessoa: item.tipo_pessoa || 'juridica',
       telefone1: item.telefone1 || '', telefone2: item.telefone2 || '',
-      uf: item.uf, cidade: item.cidade,
+      uf: item.uf, cidade: item.cidade, codigo_ibge: item.codigo_ibge || '',
       cep: item.cep || '', logradouro: item.logradouro || '', numero: item.numero || '',
       complemento: item.complemento || '', bairro: item.bairro || '',
       inscricao_estadual: item.inscricao_estadual || '',
@@ -617,10 +618,10 @@ export default function Cadastros() {
               </div>
 
               {/* UF + Cidade (IBGE) */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">UF *</label>
-                  <select value={form.uf} onChange={e => setForm({...form, uf: e.target.value, cidade: ''})}
+                  <select value={form.uf} onChange={e => setForm({...form, uf: e.target.value, cidade: '', codigo_ibge: ''})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     <option value="">Selecione...</option>
                     {ufs.map(u => <option key={u.sigla} value={u.sigla}>{u.sigla} - {u.nome}</option>)}
@@ -637,6 +638,12 @@ export default function Cadastros() {
                       {cidades.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                     </select>
                   )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código IBGE</label>
+                  <input type="text" value={form.codigo_ibge} onChange={e => setForm({...form, codigo_ibge: e.target.value})}
+                    placeholder="Ex: 5205109"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
               </div>
 
