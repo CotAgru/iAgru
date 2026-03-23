@@ -75,14 +75,13 @@ export default async function handler(req, res) {
       throw new Error(error.message)
     }
 
-    // Gerar URL pública
-    const { data: publicData } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(fileName)
+    // Gerar URL pública manualmente
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`
 
     return res.status(200).json({
       success: true,
-      publicUrl: publicData.publicUrl,
+      publicUrl,
       path: data.path,
     })
 
