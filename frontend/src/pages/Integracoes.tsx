@@ -691,6 +691,10 @@ export default function Integracoes() {
       toast.error('Nome do cadastro é obrigatório')
       return
     }
+    if (!s.iagruCpfCnpj?.trim()) {
+      toast.error('CPF/CNPJ é obrigatório para enviar ao Aegro. Cadastre o CPF/CNPJ antes de enviar.')
+      return
+    }
     
     // Montar payload conforme schema oficial da API Aegro
     const payload: any = {

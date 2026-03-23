@@ -58,10 +58,19 @@ export default async function handler(req, res) {
     const text = await response.text()
 
     if (!response.ok) {
+      // Tentar parsear resposta de erro como JSON
+      let errorDetail = text
+      try {
+        errorDetail = JSON.parse(text)
+      } catch {
+        // Se não for JSON válido, manter como texto
+      }
+      
       return res.status(response.status).json({
         error: `Aegro API erro ${response.status}`,
-        detail: text,
+        detail: errorDetail,
         url: `${AEGRO_BASE}${endpoint}`,
+        statusText: response.statusText,
       })
     }
 
