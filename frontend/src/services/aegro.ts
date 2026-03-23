@@ -15,8 +15,12 @@ async function aegroFetch(endpoint: string, token: string, body?: any, method?: 
     body: JSON.stringify({ endpoint, token, body, method }),
   })
   if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: resp.statusText }))
-    throw new Error(err?.error || err?.detail || `Erro ${resp.status}`)
+    const errorData = await resp.json().catch(() => ({ error: resp.statusText }))
+    // Criar erro com mensagem legível mas preservar todos os detalhes
+    const error: any = new Error(errorData?.error || errorData?.detail || `Aegro API erro ${resp.status}`)
+    error.status = resp.status
+    error.response = errorData // Toda a resposta do proxy (error, detail, url, statusText)
+    throw error
   }
   return resp.json()
 }
