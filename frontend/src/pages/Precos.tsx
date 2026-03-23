@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Filter, FileDown, Lo
 import toast from 'react-hot-toast'
 import { getPrecos, createPreco, updatePreco, deletePreco, getCadastros, getProdutos } from '../services/api'
 import ViewModal, { Field } from '../components/ViewModal'
+import SearchableSelect from '../components/SearchableSelect'
 import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtBRL, fmtInt, fmtData } from '../utils/format'
@@ -438,31 +439,23 @@ export default function Precos() {
             <div className="p-4 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
-                <select value={form.origem_id} onChange={e => onOrigemChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Selecione...</option>
-                  {origemDestino.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome} ({(l.tipos||[]).join(', ')})</option>)}
-                </select>
+                <SearchableSelect value={form.origem_id} onChange={val => onOrigemChange(val)}
+                  options={[{ value: '', label: 'Selecione...' }, ...origemDestino.map((l: any) => ({ value: l.id, label: `${l.nome_fantasia || l.nome} (${(l.tipos||[]).join(', ')})` }))]} placeholder="Origem" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
-                <select value={form.destino_id} onChange={e => onDestinoChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Selecione...</option>
-                  {origemDestino.map((l: any) => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome} ({(l.tipos||[]).join(', ')})</option>)}
-                </select>
+                <SearchableSelect value={form.destino_id} onChange={val => onDestinoChange(val)}
+                  options={[{ value: '', label: 'Selecione...' }, ...origemDestino.map((l: any) => ({ value: l.id, label: `${l.nome_fantasia || l.nome} (${(l.tipos||[]).join(', ')})` }))]} placeholder="Destino" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
-                <select value={form.produto_id} onChange={e => setForm({...form, produto_id: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Selecione...</option>
-                  {produtos.map((p: any) => <option key={p.id} value={p.id}>{p.nome} ({p.tipo})</option>)}
-                </select>
+                <SearchableSelect value={form.produto_id} onChange={val => setForm({...form, produto_id: val})}
+                  options={[{ value: '', label: 'Selecione...' }, ...produtos.map((p: any) => ({ value: p.id, label: `${p.nome} (${p.tipo})` }))]} placeholder="Produto" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Transportador</label>
-                <select value={form.fornecedor_id} onChange={e => setForm({...form, fornecedor_id: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                  <option value="">Todos (preco geral)</option>
-                  {transportadores.map((f: any) => <option key={f.id} value={f.id}>{f.nome_fantasia || f.nome}</option>)}
-                </select>
+                <SearchableSelect value={form.fornecedor_id} onChange={val => setForm({...form, fornecedor_id: val})}
+                  options={[{ value: '', label: 'Todos (preço geral)' }, ...transportadores.map((f: any) => ({ value: f.id, label: f.nome_fantasia || f.nome }))]} placeholder="Transportador" />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
@@ -471,9 +464,8 @@ export default function Precos() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-                  <select value={form.unidade_preco} onChange={e => setForm({...form, unidade_preco: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                    {UNIDADES_PRECO.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
+                  <SearchableSelect value={form.unidade_preco} onChange={val => setForm({...form, unidade_preco: val})}
+                    options={UNIDADES_PRECO.map(u => ({ value: u, label: u }))} placeholder="Unidade" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Dist. (km) {calcDist && <Loader2 className="w-3 h-3 inline animate-spin" />}</label>
