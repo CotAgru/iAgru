@@ -695,7 +695,7 @@ export default function Integracoes() {
   }
 
   // Ação: abrir preview antes de enviar ao Aegro
-  const handleSendToAegro = (idx: number) => {
+  const handleSendToAegro = async (idx: number) => {
     const s = companySyncs[idx]
     if (!s.iagruId || !s.iagruNome?.trim()) {
       toast.error('Nome do cadastro é obrigatório')
@@ -703,6 +703,30 @@ export default function Integracoes() {
     }
     if (!s.iagruCpfCnpj?.trim()) {
       toast.error('CPF/CNPJ é obrigatório para enviar ao Aegro. Cadastre o CPF/CNPJ antes de enviar.')
+      return
+    }
+
+    // VALIDAÇÃO CRÍTICA: Verificar se já existe no Aegro pelo CNPJ
+    const cnpjNormalizado = s.iagruCpfCnpj.replace(/\D/g, '')
+    const companiesData = await aegroGetCompanies(token.trim(), 1, 500)
+    const companies = companiesData?.items || []
+    const existeNoAegro = companies.find((co: any) => {
+      const cnpjAegro = (co.fiscalNumber?.code || '').replace(/\D/g, '')
+      return cnpjAegro === cnpjNormalizado
+    })
+
+    if (existeNoAegro) {
+      toast.error(`CNPJ ${s.iagruCpfCnpj} já existe no Aegro como "${existeNoAegro.name}". Vincule os cadastros em vez de enviar novamente.`)
+      // Atualizar status para mostrar que existe match
+      setCompanySyncs(prev => prev.map((item, i) => i === idx ? {
+        ...item,
+        aegroKey: existeNoAegro.key,
+        aegroName: existeNoAegro.name,
+        aegroTradeName: existeNoAegro.tradeName,
+        aegroCpfCnpj: existeNoAegro.fiscalNumber?.code || null,
+        status: 'match_suggestion',
+        matchField: 'cpf_cnpj'
+      } : item))
       return
     }
     
@@ -1005,34 +1029,70 @@ export default function Integracoes() {
                 )}
               </div>
 
-              {/* Dashboard de stats */}
+              {/* Dashboard de stats - Safras */}
               {syncStats && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-blue-700">
-                      {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.totalAegro}
-                    </p>
-                    <p className="text-[10px] text-blue-600 font-medium uppercase tracking-wide">Total Aegro</p>
+                <>
+                  <p className="text-xs text-gray-500 font-medium mb-2">Safras (Crops)</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-blue-700">
+                        {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.totalAegro}
+                      </p>
+                      <p className="text-[10px] text-blue-600 font-medium uppercase tracking-wide">Total Aegro</p>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-green-700">
+                        {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.imported}
+                      </p>
+                      <p className="text-[10px] text-green-600 font-medium uppercase tracking-wide">Importadas</p>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-orange-700">
+                        {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.newCrops}
+                      </p>
+                      <p className="text-[10px] text-orange-600 font-medium uppercase tracking-wide">Novas</p>
+                    </div>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-yellow-700">
+                        {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.changed}
+                      </p>
+                      <p className="text-[10px] text-yellow-600 font-medium uppercase tracking-wide">Alteradas</p>
+                    </div>
                   </div>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-green-700">
-                      {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.imported}
-                    </p>
-                    <p className="text-[10px] text-green-600 font-medium uppercase tracking-wide">Importadas</p>
+                </>
+              )}
+
+              {/* Dashboard de stats - Cadastros */}
+              {companySyncs.length > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 font-medium mb-2">Cadastros (Companies)</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-purple-700">
+                        {companySyncs.filter(s => s.status === 'match_suggestion').length}
+                      </p>
+                      <p className="text-[10px] text-purple-600 font-medium uppercase tracking-wide">Sugestões</p>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-orange-700">
+                        {companySyncs.filter(s => s.status === 'only_iagru').length}
+                      </p>
+                      <p className="text-[10px] text-orange-600 font-medium uppercase tracking-wide">Apenas iAgru</p>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-blue-700">
+                        {companySyncs.filter(s => s.status === 'only_aegro').length}
+                      </p>
+                      <p className="text-[10px] text-blue-600 font-medium uppercase tracking-wide">Apenas Aegro</p>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 text-center">
+                      <p className="text-lg font-bold text-green-700">
+                        {companySyncs.filter(s => s.status === 'linked').length}
+                      </p>
+                      <p className="text-[10px] text-green-600 font-medium uppercase tracking-wide">Vinculados</p>
+                    </div>
                   </div>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-orange-700">
-                      {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.newCrops}
-                    </p>
-                    <p className="text-[10px] text-orange-600 font-medium uppercase tracking-wide">Novas</p>
-                  </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 text-center">
-                    <p className="text-lg font-bold text-yellow-700">
-                      {syncStats.loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : syncStats.changed}
-                    </p>
-                    <p className="text-[10px] text-yellow-600 font-medium uppercase tracking-wide">Alteradas</p>
-                  </div>
-                </div>
+                </>
               )}
 
               {/* Botões de ação */}
