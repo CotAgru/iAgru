@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { ShoppingCart, Plus, Pencil, Trash2, X, Loader2, Search, FileSpreadsheet, Upload, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getContratosVenda, createContratoVenda, updateContratoVenda, deleteContratoVenda, getCadastros, getProdutos, getSafras } from '../services/api'
+import { getContratosVenda, createContratoVenda, updateContratoVenda, deleteContratoVenda, getCadastros, getProdutos, getSafras, getTiposContrato, getUnidadesMedida } from '../services/api'
+import SearchableSelect from '../components/SearchableSelect'
+import InfoTooltip from '../components/InfoTooltip'
 import { useSort } from '../hooks/useSort'
 import SortHeader from '../components/SortHeader'
 import { fmtBRL, fmtDec, fmtData } from '../utils/format'
@@ -19,9 +21,9 @@ const MODALIDADES = ['FOB', 'CIF']
 const UNIDADES_PRECO = ['R$/ton', 'R$/sc']
 
 const emptyForm = {
-  numero_contrato: '', comprador_id: '', corretor_id: '', produto_id: '', safra_id: '',
-  volume_tons: '', preco_valor: '', preco_unidade: 'R$/ton', modalidade: 'FOB',
-  data_contrato: '', data_entrega_inicio: '', data_entrega_fim: '', status: 'negociacao',
+  numero_contrato: '', comprador_id: '', corretor_id: '', produto_id: '', safra_id: '', ano_safra: '',
+  tipo_contrato_id: '', quantidade: '', unidade_medida_id: '', valor_unitario: '', valor_total: '',
+  modalidade: 'FOB', data_contrato: '', data_entrega_inicio: '', data_entrega_fim: '', status: 'negociacao',
   local_entrega_id: '', observacoes: '', ativo: true, arquivo_url: '',
 }
 
@@ -30,6 +32,8 @@ export default function ContratosVenda() {
   const [cadastros, setCadastros] = useState<any[]>([])
   const [produtos, setProdutos] = useState<any[]>([])
   const [safras, setSafras] = useState<any[]>([])
+  const [tiposContrato, setTiposContrato] = useState<any[]>([])
+  const [unidadesMedida, setUnidadesMedida] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -41,8 +45,22 @@ export default function ContratosVenda() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getContratosVenda().catch(() => []), getCadastros(), getProdutos(), getSafras().catch(() => [])])
-      .then(([cv, c, p, s]) => { setItems(cv); setCadastros(c); setProdutos(p); setSafras(s) })
+    Promise.all([
+      getContratosVenda().catch(() => []), 
+      getCadastros(), 
+      getProdutos(), 
+      getSafras().catch(() => []),
+      getTiposContrato().catch(() => []),
+      getUnidadesMedida().catch(() => [])
+    ])
+      .then(([cv, c, p, s, tc, um]) => { 
+        setItems(cv); 
+        setCadastros(c); 
+        setProdutos(p); 
+        setSafras(s);
+        setTiposContrato(tc);
+        setUnidadesMedida(um);
+      })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
   }
@@ -58,10 +76,13 @@ export default function ContratosVenda() {
     setForm({
       numero_contrato: item.numero_contrato || '',
       comprador_id: item.comprador_id || '', corretor_id: item.corretor_id || '',
-      produto_id: item.produto_id || '', safra_id: item.safra_id || '',
-      volume_tons: item.volume_tons != null ? String(item.volume_tons) : '',
-      preco_valor: item.preco_valor != null ? String(item.preco_valor) : '',
-      preco_unidade: item.preco_unidade || 'R$/ton', modalidade: item.modalidade || 'FOB',
+      produto_id: item.produto_id || '', safra_id: item.safra_id || '', ano_safra: item.ano_safra || '',
+      tipo_contrato_id: item.tipo_contrato_id || '',
+      quantidade: item.quantidade != null ? String(item.quantidade) : '',
+      unidade_medida_id: item.unidade_medida_id || '',
+      valor_unitario: item.valor_unitario != null ? String(item.valor_unitario) : '',
+      valor_total: item.valor_total != null ? String(item.valor_total) : '',
+      modalidade: item.modalidade || 'FOB',
       data_contrato: item.data_contrato || '', data_entrega_inicio: item.data_entrega_inicio || '',
       data_entrega_fim: item.data_entrega_fim || '', status: item.status || 'negociacao',
       local_entrega_id: item.local_entrega_id || '', observacoes: item.observacoes || '',
@@ -113,20 +134,29 @@ export default function ContratosVenda() {
   }
 
   const save = async () => {
-    if (!form.comprador_id || !form.produto_id || !form.volume_tons || !form.preco_valor) {
-      toast.error('Comprador, Produto, Volume e Preço são obrigatórios'); return
+    if (!form.comprador_id || !form.produto_id || !form.quantidade || !form.valor_unitario) {
+      toast.error('Comprador, Produto, Quantidade e Valor Unitário são obrigatórios'); return
     }
     setSaving(true)
     try {
       // Upload do arquivo se houver
       const arquivoUrl = await uploadFile()
       
+      // Calcular valor total
+      const quantidade = parseFloat(form.quantidade)
+      const valorUnitario = parseFloat(form.valor_unitario)
+      const valorTotal = quantidade * valorUnitario
+      
       const payload: any = {
         ...form,
-        volume_tons: parseFloat(form.volume_tons),
-        preco_valor: parseFloat(form.preco_valor),
+        quantidade,
+        valor_unitario: valorUnitario,
+        valor_total: valorTotal,
+        ano_safra: form.ano_safra ? parseInt(form.ano_safra) : null,
         corretor_id: form.corretor_id || null,
         safra_id: form.safra_id || null,
+        tipo_contrato_id: form.tipo_contrato_id || null,
+        unidade_medida_id: form.unidade_medida_id || null,
         local_entrega_id: form.local_entrega_id || null,
         data_contrato: form.data_contrato || null,
         data_entrega_inicio: form.data_entrega_inicio || null,

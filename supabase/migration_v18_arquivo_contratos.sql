@@ -6,8 +6,8 @@ ADD COLUMN IF NOT EXISTS arquivo_url TEXT;
 
 COMMENT ON COLUMN contratos_venda.arquivo_url IS 'URL do arquivo anexado (contrato PDF, imagem, etc)';
 
--- Adicionar campo arquivo_url em contratos_compra
-ALTER TABLE contratos_compra 
+-- Adicionar campo arquivo_url em compras_insumo
+ALTER TABLE compras_insumo 
 ADD COLUMN IF NOT EXISTS arquivo_url TEXT;
 
-COMMENT ON COLUMN contratos_compra.arquivo_url IS 'URL do arquivo anexado (contrato PDF, imagem, etc)';
+COMMENT ON COLUMN compras_insumo.arquivo_url IS 'URL do arquivo anexado (contrato PDF, imagem, etc)';

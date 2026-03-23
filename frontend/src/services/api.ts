@@ -449,3 +449,29 @@ export const uploadRomaneioImage = async (base64DataUrl: string, romaneioId?: st
   
   return urlData.publicUrl
 }
+
+// === TIPOS DE CONTRATO ===
+export const getTiposContrato = async () =>
+  throwIfError(await supabase.from('tipos_contrato').select('*').eq('ativo', true).order('nome'))
+
+export const createTipoContrato = async (data: any) =>
+  throwIfError(await supabase.from('tipos_contrato').insert(data).select().single())
+
+export const updateTipoContrato = async (id: string, data: any) =>
+  throwIfError(await supabase.from('tipos_contrato').update(data).eq('id', id).select().single())
+
+export const deleteTipoContrato = async (id: string) =>
+  throwIfError(await supabase.from('tipos_contrato').delete().eq('id', id))
+
+// === UNIDADES DE MEDIDA ===
+export const getUnidadesMedida = async () =>
+  throwIfError(await supabase.from('unidades_medida').select('*').eq('ativo', true).order('grupo', { ascending: true }).order('nome'))
+
+export const createUnidadeMedida = async (data: any) =>
+  throwIfError(await supabase.from('unidades_medida').insert(data).select().single())
+
+export const updateUnidadeMedida = async (id: string, data: any) =>
+  throwIfError(await supabase.from('unidades_medida').update(data).eq('id', id).select().single())
+
+export const deleteUnidadeMedida = async (id: string) =>
+  throwIfError(await supabase.from('unidades_medida').delete().eq('id', id))
