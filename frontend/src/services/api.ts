@@ -392,7 +392,8 @@ export const getContratosVenda = async () => {
       produtos(nome, tipo),
       ano_safra(nome),
       contrato_venda_safras(id, safra_id, safras(id, nome)),
-      local_entrega:cadastros!contratos_venda_local_entrega_id_fkey(nome, nome_fantasia)
+      local_entrega:cadastros!contratos_venda_local_entrega_id_fkey(nome, nome_fantasia),
+      unidades_medida(nome, simbolo, grupo, fator_conversao)
     `)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -405,6 +406,11 @@ export const getContratosVenda = async () => {
     safra_ids: (c.contrato_venda_safras || []).map((s: any) => s.safra_id),
     safras_nomes: (c.contrato_venda_safras || []).map((s: any) => s.safras?.nome).filter(Boolean),
     local_entrega_nome: c.local_entrega?.nome_fantasia || c.local_entrega?.nome,
+    volume_tons: c.quantidade || 0,
+    preco_valor: c.valor_unitario || 0,
+    preco_unidade: c.unidades_medida?.simbolo || '',
+    unidade_nome: c.unidades_medida?.nome || '',
+    unidade_fator: c.unidades_medida?.fator_conversao || 1,
   }))
 }
 
@@ -426,7 +432,8 @@ export const getComprasInsumo = async () => {
       fornecedor:cadastros!contratos_compra_insumo_fornecedor_id_fkey(nome, nome_fantasia),
       produtos(nome, tipo),
       ano_safra(nome),
-      contrato_compra_safras(id, safra_id, safras(id, nome))
+      contrato_compra_safras(id, safra_id, safras(id, nome)),
+      unidades_medida(nome, simbolo, grupo, fator_conversao)
     `)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -437,6 +444,11 @@ export const getComprasInsumo = async () => {
     ano_safra_nome: c.ano_safra?.nome,
     safra_ids: (c.contrato_compra_safras || []).map((s: any) => s.safra_id),
     safras_nomes: (c.contrato_compra_safras || []).map((s: any) => s.safras?.nome).filter(Boolean),
+    volume_tons: c.quantidade || 0,
+    preco_valor: c.valor_unitario || 0,
+    preco_unidade: c.unidades_medida?.simbolo || '',
+    unidade_nome: c.unidades_medida?.nome || '',
+    unidade_fator: c.unidades_medida?.fator_conversao || 1,
   }))
 }
 

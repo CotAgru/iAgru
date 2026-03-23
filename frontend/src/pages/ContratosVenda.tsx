@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ShoppingCart, Plus, Pencil, Trash2, X, Loader2, Search, FileSpreadsheet, Upload, FileText } from 'lucide-react'
+import { ShoppingCart, Plus, Pencil, Trash2, X, Loader2, Search, FileSpreadsheet, Upload, FileText, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getContratosVenda, createContratoVenda, updateContratoVenda, deleteContratoVenda, getCadastros, getProdutos, getSafras, getAnosSafra, getTiposContrato, getUnidadesMedida, syncContratoVendaSafras } from '../services/api'
 import SearchableSelect from '../components/SearchableSelect'
@@ -45,6 +45,18 @@ export default function ContratosVenda() {
   const [busca, setBusca] = useState('')
   const [uploadingFile, setUploadingFile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [unidadeExibicao, setUnidadeExibicao] = useState('tn')
+  const [showColumnConfig, setShowColumnConfig] = useState(false)
+  const [columns, setColumns] = useState([
+    { key: 'numero_contrato', label: 'Nº', visible: true, order: 1 },
+    { key: 'comprador_nome', label: 'Comprador', visible: true, order: 2 },
+    { key: 'produto_nome', label: 'Produto', visible: true, order: 3 },
+    { key: 'safras_nomes', label: 'Safras', visible: true, order: 4 },
+    { key: 'volume', label: 'Volume', visible: true, order: 5 },
+    { key: 'preco_valor', label: 'Preço', visible: true, order: 6 },
+    { key: 'modalidade', label: 'Mod.', visible: true, order: 7 },
+    { key: 'status', label: 'Status', visible: true, order: 8 },
+  ])
 
   const load = () => {
     setLoading(true)
@@ -205,6 +217,35 @@ export default function ContratosVenda() {
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s?.color || 'bg-gray-100 text-gray-600'}`}>{s?.label || status}</span>
   }
 
+  const convertVolume = (quantidade: number, fatorOrigem: number, simboloDestino: string) => {
+    const unidadeDestino = unidadesMedida.find(u => u.simbolo === simboloDestino)
+    if (!unidadeDestino) return quantidade
+    return (quantidade * fatorOrigem) / unidadeDestino.fator_conversao
+  }
+
+  const visibleColumns = columns.filter(c => c.visible).sort((a, b) => a.order - b.order)
+
+  const toggleColumn = (key: string) => {
+    setColumns(cols => cols.map(c => c.key === key ? { ...c, visible: !c.visible } : c))
+  }
+
+  const reorderColumn = (key: string, newOrder: number) => {
+    setColumns(cols => cols.map(c => c.key === key ? { ...c, order: newOrder } : c))
+  }
+
+  const restoreDefaultColumns = () => {
+    setColumns([
+      { key: 'numero_contrato', label: 'Nº', visible: true, order: 1 },
+      { key: 'comprador_nome', label: 'Comprador', visible: true, order: 2 },
+      { key: 'produto_nome', label: 'Produto', visible: true, order: 3 },
+      { key: 'safras_nomes', label: 'Safras', visible: true, order: 4 },
+      { key: 'volume', label: 'Volume', visible: true, order: 5 },
+      { key: 'preco_valor', label: 'Preço', visible: true, order: 6 },
+      { key: 'modalidade', label: 'Mod.', visible: true, order: 7 },
+      { key: 'status', label: 'Status', visible: true, order: 8 },
+    ])
+  }
+
   const handleExportExcel = () => {
     exportToExcel({
       filename: 'contratos_venda_contagru', title: 'Contratos de Venda',
@@ -240,8 +281,11 @@ export default function ContratosVenda() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Contratos de Venda</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 text-sm" title="Exportar Excel">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">
             <FileSpreadsheet className="w-4 h-4" /><span className="hidden sm:inline">Excel</span>
+          </button>
+          <button onClick={() => setShowColumnConfig(true)} className="flex items-center gap-2 bg-gray-600 text-white px-3 py-2 rounded-lg hover:bg-gray-700 text-sm">
+            <Settings className="w-4 h-4" /> Colunas
           </button>
           <button onClick={openNew} className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">
             <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Novo</span> Contrato
@@ -249,10 +293,18 @@ export default function ContratosVenda() {
         </div>
       </div>
 
-      <div className="mb-4 relative">
-        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-        <input type="text" placeholder="Buscar por comprador, produto, safra, nº contrato..." value={busca} onChange={e => setBusca(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />
+      <div className="mb-4 flex gap-3">
+        <div className="flex-1 relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+          <input type="text" placeholder="Buscar por comprador, produto, safra, nº contrato..." value={busca} onChange={e => setBusca(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm" />
+        </div>
+        <select value={unidadeExibicao} onChange={e => setUnidadeExibicao(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+          {unidadesMedida.filter(u => u.ativo && u.grupo === 'sólido').map(u => (
+            <option key={u.id} value={u.simbolo}>{u.simbolo.toUpperCase()}</option>
+          ))}
+        </select>
       </div>
 
       <p className="text-xs text-gray-500 mb-2">{filtered.length} de {items.length} contratos</p>
@@ -261,35 +313,45 @@ export default function ContratosVenda() {
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <SortHeader label="Nº" field="numero_contrato" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
-              <SortHeader label="Comprador" field="comprador_nome" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
-              <SortHeader label="Produto" field="produto_nome" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
-              <SortHeader label="Safras" field="safras_nomes" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
-              <SortHeader label="Volume (ton)" field="volume_tons" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} align="right" />
-              <SortHeader label="Preço" field="preco_valor" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} align="right" />
-              <th className="px-4 py-3 font-semibold text-gray-600 text-center">Mod.</th>
-              <SortHeader label="Status" field="status" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
+              {visibleColumns.map(col => {
+                if (col.key === 'volume') {
+                  return <SortHeader key={col.key} label={`Volume (${unidadeExibicao})`} field="volume_tons" sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} align="right" />
+                }
+                if (col.key === 'preco_valor') {
+                  return <SortHeader key={col.key} label={col.label} field={col.key} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} align="right" />
+                }
+                if (col.key === 'modalidade') {
+                  return <th key={col.key} className="px-4 py-3 font-semibold text-gray-600 text-center">{col.label}</th>
+                }
+                return <SortHeader key={col.key} label={col.label} field={col.key} sortKey={sortKey} sortDirection={sortDirection} onSort={toggleSort} />
+              })}
               <th className="text-right px-4 py-3 font-semibold text-gray-600 w-24">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {sorted.map((item: any) => (
               <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-600">{item.numero_contrato || '-'}</td>
-                <td className="px-4 py-3 font-medium">{item.comprador_nome}</td>
-                <td className="px-4 py-3 text-gray-600">{item.produto_nome}</td>
-                <td className="px-4 py-3 text-gray-600">{item.safras_nomes?.length > 0 ? item.safras_nomes.join(', ') : '-'}</td>
-                <td className="px-4 py-3 text-right">{fmtDec(item.volume_tons, 2)}</td>
-                <td className="px-4 py-3 text-right">{fmtBRL(item.preco_valor)} <span className="text-xs text-gray-400">{item.preco_unidade}</span></td>
-                <td className="px-4 py-3 text-center text-xs font-medium">{item.modalidade}</td>
-                <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
+                {visibleColumns.map(col => {
+                  if (col.key === 'numero_contrato') return <td key={col.key} className="px-4 py-3 text-gray-600">{item.numero_contrato || '-'}</td>
+                  if (col.key === 'comprador_nome') return <td key={col.key} className="px-4 py-3 font-medium">{item.comprador_nome}</td>
+                  if (col.key === 'produto_nome') return <td key={col.key} className="px-4 py-3 text-gray-600">{item.produto_nome}</td>
+                  if (col.key === 'safras_nomes') return <td key={col.key} className="px-4 py-3 text-gray-600">{item.safras_nomes?.length > 0 ? item.safras_nomes.join(', ') : '-'}</td>
+                  if (col.key === 'volume') {
+                    const volumeConvertido = convertVolume(item.volume_tons || 0, item.unidade_fator || 1, unidadeExibicao)
+                    return <td key={col.key} className="px-4 py-3 text-right font-medium">{fmtDec(volumeConvertido, 2)}</td>
+                  }
+                  if (col.key === 'preco_valor') return <td key={col.key} className="px-4 py-3 text-right">{fmtBRL(item.preco_valor)} <span className="text-xs text-gray-400">{item.preco_unidade}</span></td>
+                  if (col.key === 'modalidade') return <td key={col.key} className="px-4 py-3 text-center text-xs font-medium">{item.modalidade}</td>
+                  if (col.key === 'status') return <td key={col.key} className="px-4 py-3">{getStatusBadge(item.status)}</td>
+                  return <td key={col.key} className="px-4 py-3">-</td>
+                })}
                 <td className="px-4 py-3 text-right space-x-1">
                   <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Pencil className="w-4 h-4" /></button>
                   <button onClick={() => remove(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
                 </td>
               </tr>
             ))}
-            {sorted.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Nenhum contrato cadastrado</td></tr>}
+            {sorted.length === 0 && <tr><td colSpan={visibleColumns.length + 1} className="px-4 py-8 text-center text-gray-400">Nenhum contrato cadastrado</td></tr>}
           </tbody>
         </table>
       </div>
@@ -507,6 +569,44 @@ export default function ContratosVenda() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Configuração de Colunas */}
+      {showColumnConfig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Configurações de Colunas</h2>
+              <button onClick={() => setShowColumnConfig(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              <p className="text-sm text-gray-600 mb-4">Selecione quais colunas exibir e defina a ordem (1 = primeira coluna):</p>
+              <div className="space-y-2">
+                {columns.map(col => (
+                  <div key={col.key} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                    <input type="checkbox" checked={col.visible} onChange={() => toggleColumn(col.key)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    <span className="flex-1 text-sm font-medium">{col.label}</span>
+                    <input type="number" min="1" max={columns.length} value={col.order}
+                      onChange={e => reorderColumn(col.key, parseInt(e.target.value) || 1)}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-between p-4 border-t">
+              <button onClick={restoreDefaultColumns}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Restaurar Padrão
+              </button>
+              <button onClick={() => setShowColumnConfig(false)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Fechar
               </button>
             </div>
           </div>
