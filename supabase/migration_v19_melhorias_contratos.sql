@@ -6,11 +6,11 @@ ADD COLUMN IF NOT EXISTS ano_safra INTEGER;
 
 COMMENT ON COLUMN contratos_venda.ano_safra IS 'Ano da safra (ex: 2024)';
 
--- 2. Adicionar campo ano_safra em compras_insumo  
-ALTER TABLE compras_insumo 
+-- 2. Adicionar campo ano_safra em contratos_compra_insumo  
+ALTER TABLE contratos_compra_insumo 
 ADD COLUMN IF NOT EXISTS ano_safra INTEGER;
 
-COMMENT ON COLUMN compras_insumo.ano_safra IS 'Ano da safra (ex: 2024)';
+COMMENT ON COLUMN contratos_compra_insumo.ano_safra IS 'Ano da safra (ex: 2024)';
 
 -- 3. Adicionar campo tipo_contrato_id em contratos_venda
 ALTER TABLE contratos_venda 
@@ -18,11 +18,11 @@ ADD COLUMN IF NOT EXISTS tipo_contrato_id UUID REFERENCES tipos_contrato(id);
 
 COMMENT ON COLUMN contratos_venda.tipo_contrato_id IS 'Tipo do contrato (Fixo, Futuro, Barter, etc)';
 
--- 4. Adicionar campo tipo_contrato_id em compras_insumo
-ALTER TABLE compras_insumo 
+-- 4. Adicionar campo tipo_contrato_id em contratos_compra_insumo
+ALTER TABLE contratos_compra_insumo 
 ADD COLUMN IF NOT EXISTS tipo_contrato_id UUID REFERENCES tipos_contrato(id);
 
-COMMENT ON COLUMN compras_insumo.tipo_contrato_id IS 'Tipo do contrato (Fixo, Futuro, Barter, etc)';
+COMMENT ON COLUMN contratos_compra_insumo.tipo_contrato_id IS 'Tipo do contrato (Fixo, Futuro, Barter, etc)';
 
 -- 5. Renomear campos em contratos_venda para melhor nomenclatura
 ALTER TABLE contratos_venda 
