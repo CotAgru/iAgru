@@ -294,6 +294,35 @@ export default function ContratosVenda() {
               <button onClick={() => setShowForm(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 space-y-4">
+              {/* Linha 1: Ano Safra / Safra / Modalidade Frete */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ano Safra</label>
+                  <input type="number" value={form.ano_safra} onChange={e => setForm(f => ({ ...f, ano_safra: e.target.value }))}
+                    placeholder="2024" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Safra</label>
+                  <SearchableSelect
+                    value={form.safra_id}
+                    onChange={(val) => setForm(f => ({ ...f, safra_id: val }))}
+                    options={[{ value: '', label: 'Nenhuma' }, ...safras.filter(s => s.ativo && (!form.ano_safra || s.ano === parseInt(form.ano_safra))).map(s => ({ value: s.id, label: s.nome }))]}
+                    placeholder="Selecione a safra"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    Modalidade Frete
+                    <InfoTooltip text="FOB: Frete pago pelo comprador | CIF: Frete pago pelo vendedor" />
+                  </label>
+                  <select value={form.modalidade} onChange={e => setForm(f => ({ ...f, modalidade: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Linha 2: Nº Contrato / Data Contrato / Tipo Contrato */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nº Contrato</label>
@@ -301,100 +330,117 @@ export default function ContratosVenda() {
                     placeholder="Ex: CV-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Modalidade</label>
-                  <select value={form.modalidade} onChange={e => setForm(f => ({ ...f, modalidade: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Comprador *</label>
-                  <select value={form.comprador_id} onChange={e => setForm(f => ({ ...f, comprador_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Selecione</option>
-                    {compradores.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.nome}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Corretor</label>
-                  <select value={form.corretor_id} onChange={e => setForm(f => ({ ...f, corretor_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Nenhum</option>
-                    {corretores.map(c => <option key={c.id} value={c.id}>{c.nome_fantasia || c.nome}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
-                  <select value={form.produto_id} onChange={e => setForm(f => ({ ...f, produto_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Selecione</option>
-                    {produtos.filter(p => p.ativo).map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Safra</label>
-                  <select value={form.safra_id} onChange={e => setForm(f => ({ ...f, safra_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Nenhuma</option>
-                    {safras.filter(s => s.ativo).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Local Entrega</label>
-                  <select value={form.local_entrega_id} onChange={e => setForm(f => ({ ...f, local_entrega_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="">Nenhum</option>
-                    {locaisEntrega.map(l => <option key={l.id} value={l.id}>{l.nome_fantasia || l.nome}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Volume (ton) *</label>
-                  <input type="number" step="0.01" value={form.volume_tons} onChange={e => setForm(f => ({ ...f, volume_tons: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Preço *</label>
-                  <input type="number" step="0.01" value={form.preco_valor} onChange={e => setForm(f => ({ ...f, preco_valor: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div className="col-span-2 sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidade Preço</label>
-                  <select value={form.preco_unidade} onChange={e => setForm(f => ({ ...f, preco_unidade: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    {UNIDADES_PRECO.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Contrato</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    Data Contrato
+                    <InfoTooltip text="Data de fechamento do contrato" />
+                  </label>
                   <input type="date" value={form.data_contrato} onChange={e => setForm(f => ({ ...f, data_contrato: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Entrega Início</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo Contrato</label>
+                  <SearchableSelect
+                    value={form.tipo_contrato_id}
+                    onChange={(val) => setForm(f => ({ ...f, tipo_contrato_id: val }))}
+                    options={[{ value: '', label: 'Selecione' }, ...tiposContrato.map(t => ({ value: t.id, label: t.nome }))]}
+                    placeholder="Selecione o tipo"
+                  />
+                </div>
+              </div>
+
+              {/* Linha 3: Data Inicial Entrega / Data Final Entrega / Corretor */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Inicial Entrega</label>
                   <input type="date" value={form.data_entrega_inicio} onChange={e => setForm(f => ({ ...f, data_entrega_inicio: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Entrega Fim</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Final Entrega</label>
                   <input type="date" value={form.data_entrega_fim} onChange={e => setForm(f => ({ ...f, data_entrega_fim: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Corretor</label>
+                  <SearchableSelect
+                    value={form.corretor_id}
+                    onChange={(val) => setForm(f => ({ ...f, corretor_id: val }))}
+                    options={[{ value: '', label: 'Nenhum' }, ...corretores.map(c => ({ value: c.id, label: c.nome_fantasia || c.nome }))]}
+                    placeholder="Selecione o corretor"
+                  />
+                </div>
               </div>
+
+              {/* Linha 4: Comprador / Local Entrega */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Comprador *</label>
+                  <SearchableSelect
+                    value={form.comprador_id}
+                    onChange={(val) => setForm(f => ({ ...f, comprador_id: val }))}
+                    options={[{ value: '', label: 'Selecione' }, ...compradores.map(c => ({ value: c.id, label: c.nome_fantasia || c.nome }))]}
+                    placeholder="Selecione o comprador"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Local de Entrega</label>
+                  <SearchableSelect
+                    value={form.local_entrega_id}
+                    onChange={(val) => setForm(f => ({ ...f, local_entrega_id: val }))}
+                    options={[{ value: '', label: 'Nenhum' }, ...locaisEntrega.map(l => ({ value: l.id, label: l.nome_fantasia || l.nome }))]}
+                    placeholder="Selecione o local"
+                  />
+                </div>
+              </div>
+
+              {/* Linha 5: Produto / Quantidade / Unidade / Valor un / Valor Total */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
+                  <SearchableSelect
+                    value={form.produto_id}
+                    onChange={(val) => setForm(f => ({ ...f, produto_id: val }))}
+                    options={[{ value: '', label: 'Selecione' }, ...produtos.filter(p => p.ativo).map(p => ({ value: p.id, label: p.nome }))]}
+                    placeholder="Selecione o produto"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade *</label>
+                  <input type="number" step="0.01" value={form.quantidade} 
+                    onChange={e => {
+                      const q = e.target.value
+                      const vTotal = q && form.valor_unitario ? (parseFloat(q) * parseFloat(form.valor_unitario)).toFixed(2) : ''
+                      setForm(f => ({ ...f, quantidade: q, valor_total: vTotal }))
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
+                  <SearchableSelect
+                    value={form.unidade_medida_id}
+                    onChange={(val) => setForm(f => ({ ...f, unidade_medida_id: val }))}
+                    options={[{ value: '', label: 'Selecione' }, ...unidadesMedida.map(u => ({ value: u.id, label: `${u.nome} (${u.simbolo})` }))]}
+                    placeholder="Un. medida"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor un *</label>
+                  <input type="number" step="0.01" value={form.valor_unitario}
+                    onChange={e => {
+                      const vu = e.target.value
+                      const vTotal = vu && form.quantidade ? (parseFloat(form.quantidade) * parseFloat(vu)).toFixed(2) : ''
+                      setForm(f => ({ ...f, valor_unitario: vu, valor_total: vTotal }))
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor Total</label>
+                  <input type="text" value={form.valor_total} readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-medium" />
+                </div>
+              </div>
+
+              {/* Linha 6: Observações */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} rows={2}
