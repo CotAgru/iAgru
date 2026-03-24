@@ -38,6 +38,46 @@ const parsePerc = (v: string): number | null => {
   const n = parseFloat(v.replace(/\./g, '').replace(',', '.'))
   return isNaN(n) ? null : n
 }
+// Formatação kg com decimais: 537.93 → "537,93" | 1200.5 → "1.200,50"
+const fmtKgDec = (v: string | number | null | undefined): string => {
+  if (v === null || v === undefined || v === '') return ''
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'))
+  if (isNaN(n)) return ''
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+// Parse kg decimal formatado → number: "537,93" → 537.93
+const parseKgDec = (v: string): number | null => {
+  if (!v) return null
+  const n = parseFloat(v.replace(/\./g, '').replace(',', '.'))
+  return isNaN(n) ? null : n
+}
+// Normalizar símbolo de unidade: 'sc/60kg' → 'sc', 'tn' → 'tn', 'kg' → 'kg'
+const normalizeUnit = (u: string): string => {
+  const lower = u.toLowerCase()
+  if (lower.startsWith('sc')) return 'sc'
+  if (lower === 'tn' || lower === 'ton') return 'tn'
+  if (lower === 'g') return 'g'
+  return lower
+}
+// Converter valor de KG para unidade selecionada
+const convertFromKg = (valorKg: number, unidade: string): number => {
+  switch (normalizeUnit(unidade)) {
+    case 'tn': return valorKg / 1000
+    case 'sc': return valorKg / 60
+    case 'g': return valorKg * 1000
+    default: return valorKg // kg
+  }
+}
+// Formatar volume convertido
+const fmtVolume = (valorKg: number | string | null | undefined, unidade: string): string => {
+  if (valorKg === null || valorKg === undefined || valorKg === '' || valorKg === 0) return '-'
+  const n = typeof valorKg === 'number' ? valorKg : parseFloat(String(valorKg).replace(/\./g, '').replace(',', '.'))
+  if (isNaN(n) || n === 0) return '-'
+  const convertido = convertFromKg(n, unidade)
+  const isKg = normalizeUnit(unidade) === 'kg'
+  if (isKg) return Math.round(convertido).toLocaleString('pt-BR')
+  return convertido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 // Para exibição na tabela (genérico)
 const fmtNum = fmtKg
 
@@ -76,7 +116,7 @@ export default function Romaneios() {
   const [precos, setPrecos] = useState<any[]>([])
   const [contratosVenda, setContratosVenda] = useState<any[]>([])
   const [unidadesMedida, setUnidadesMedida] = useState<any[]>([])
-  const [unidadeExibicao, setUnidadeExibicao] = useState('tn')
+  const [unidadeExibicao, setUnidadeExibicao] = useState('kg')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -196,7 +236,7 @@ export default function Romaneios() {
     
     // Converter para unidade solicitada
     let valorConvertido = 0
-    switch (unidade.toLowerCase()) {
+    switch (normalizeUnit(unidade)) {
       case 'tn':
         valorConvertido = valorPorTn
         break
@@ -379,10 +419,10 @@ export default function Romaneios() {
     setForm(prev => ({ ...prev, ...updates }))
   }
 
-  // Cálculo automático descontos (valores vêm formatados como "1.200")
+  // Cálculo automático descontos (valores podem ter decimais como "537,93")
   const calcDescontoTotal = (f: typeof form) => {
     const descs = [f.umidade_desc, f.impureza_desc, f.avariados_desc, f.ardidos_desc, f.esverdeados_desc, f.partidos_desc, f.quebrados_desc]
-    return descs.reduce((sum, d) => sum + (parseKg(d) || 0), 0)
+    return descs.reduce((sum, d) => sum + (parseKgDec(d) || 0), 0)
   }
 
   // Handler para campos kg: formata com separador de milhar e recalcula dependentes
@@ -403,10 +443,19 @@ export default function Romaneios() {
     setForm(next)
   }
 
-  // Handler para campos desc (kg) com recálculo de desconto total e peso corrigido
-  const handleDescChange = (field: string, val: string) => {
-    // Aceitar decimais nos campos de desconto
-    handleKgChange(field, val)
+  // Handler para campos desc (kg) com recálculo de desconto total e peso corrigido - aceita decimais
+  const handleDescChange = (field: string, raw: string) => {
+    // Permitir dígitos, ponto (milhar) e vírgula (decimal)
+    let clean = raw.replace(/[^\d.,]/g, '')
+    // Garantir apenas uma vírgula decimal
+    const parts = clean.split(',')
+    if (parts.length > 2) clean = parts[0] + ',' + parts.slice(1).join('')
+    const next = { ...form, [field]: clean }
+    const dt = calcDescontoTotal(next)
+    const pl = parseKg(next.peso_liquido) || 0
+    next.desconto_kg = dt > 0 ? fmtKg(dt) : ''
+    next.peso_corrigido = pl > 0 ? fmtKg(Math.round(pl - dt)) : ''
+    setForm(next)
   }
 
   const handlePercChange = (field: string, raw: string) => {
@@ -627,8 +676,8 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'destino': return item.destinatario_id ? cadNome(item.destinatario_id) : '-'
       case 'placa': return item.veiculo_id ? veicPlaca(item.veiculo_id) : item.placa || '-'
       case 'ticket': return item.numero_ticket || '-'
-      case 'peso_liq_sdesc': return item.peso_liquido ? fmtNum(item.peso_liquido) : '-'
-      case 'peso_liq_cdesc': return item.peso_corrigido ? fmtNum(item.peso_corrigido) : '-'
+      case 'peso_liq_sdesc': return fmtVolume(item.peso_liquido, unidadeExibicao)
+      case 'peso_liq_cdesc': return fmtVolume(item.peso_corrigido, unidadeExibicao)
       case 'motorista': return item.motorista_id ? cadNome(item.motorista_id) : '-'
       case 'transportadora': return item.transportadora_id ? cadNome(item.transportadora_id) : '-'
       case 'contrato_venda': {
@@ -641,9 +690,9 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'nfe': return item.nfe_numero || '-'
       case 'data_entrada_destino': return fmtData(item.data_entrada_destino) || '-'
       case 'data_saida_destino': return fmtData(item.data_saida_destino) || '-'
-      case 'peso_bruto': return item.peso_bruto ? fmtNum(item.peso_bruto) : '-'
-      case 'tara': return item.tara ? fmtNum(item.tara) : '-'
-      case 'peso_liquido': return item.peso_liquido ? fmtNum(item.peso_liquido) : '-'
+      case 'peso_bruto': return fmtVolume(item.peso_bruto, unidadeExibicao)
+      case 'tara': return fmtVolume(item.tara, unidadeExibicao)
+      case 'peso_liquido': return fmtVolume(item.peso_liquido, unidadeExibicao)
       case 'umidade_perc': return item.umidade_perc != null ? fmtPerc(item.umidade_perc) : '-'
       case 'impureza_perc': return item.impureza_perc != null ? fmtPerc(item.impureza_perc) : '-'
       case 'avariados_perc': return item.avariados_perc != null ? fmtPerc(item.avariados_perc) : '-'
@@ -651,15 +700,15 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'esverdeados_perc': return item.esverdeados_perc != null ? fmtPerc(item.esverdeados_perc) : '-'
       case 'partidos_perc': return item.partidos_perc != null ? fmtPerc(item.partidos_perc) : '-'
       case 'quebrados_perc': return item.quebrados_perc != null ? fmtPerc(item.quebrados_perc) : '-'
-      case 'umidade_desc': return item.umidade_desc ? fmtNum(item.umidade_desc) : '-'
-      case 'impureza_desc': return item.impureza_desc ? fmtNum(item.impureza_desc) : '-'
-      case 'avariados_desc': return item.avariados_desc ? fmtNum(item.avariados_desc) : '-'
-      case 'ardidos_desc': return item.ardidos_desc ? fmtNum(item.ardidos_desc) : '-'
-      case 'esverdeados_desc': return item.esverdeados_desc ? fmtNum(item.esverdeados_desc) : '-'
-      case 'partidos_desc': return item.partidos_desc ? fmtNum(item.partidos_desc) : '-'
-      case 'quebrados_desc': return item.quebrados_desc ? fmtNum(item.quebrados_desc) : '-'
-      case 'desconto_total': return item.desconto_kg ? fmtNum(item.desconto_kg) : '-'
-      case 'peso_corrigido': return item.peso_corrigido ? fmtNum(item.peso_corrigido) : '-'
+      case 'umidade_desc': return fmtVolume(item.umidade_desc, unidadeExibicao)
+      case 'impureza_desc': return fmtVolume(item.impureza_desc, unidadeExibicao)
+      case 'avariados_desc': return fmtVolume(item.avariados_desc, unidadeExibicao)
+      case 'ardidos_desc': return fmtVolume(item.ardidos_desc, unidadeExibicao)
+      case 'esverdeados_desc': return fmtVolume(item.esverdeados_desc, unidadeExibicao)
+      case 'partidos_desc': return fmtVolume(item.partidos_desc, unidadeExibicao)
+      case 'quebrados_desc': return fmtVolume(item.quebrados_desc, unidadeExibicao)
+      case 'desconto_total': return fmtVolume(item.desconto_kg, unidadeExibicao)
+      case 'peso_corrigido': return fmtVolume(item.peso_corrigido, unidadeExibicao)
       case 'transgenia': return item.transgenia || '-'
       case 'observacoes': return item.observacoes || '-'
       case 'cnpj_cpf': return item.cnpj_cpf || '-'
@@ -922,9 +971,15 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
             <thead className="bg-gray-50 border-b">
               <tr>
                 {visibleColumns.map((col: any) => {
-                  const isRight = ['peso_liq_sdesc','peso_liq_cdesc','peso_bruto','tara','peso_liquido','desconto_total','peso_corrigido'].includes(col.key)
+                  const volumeKeys = ['peso_liq_sdesc','peso_liq_cdesc','peso_bruto','tara','peso_liquido','desconto_total','peso_corrigido','umidade_desc','impureza_desc','avariados_desc','ardidos_desc','esverdeados_desc','partidos_desc','quebrados_desc']
+                  const isRight = volumeKeys.includes(col.key) || ['valor_frete','valor_unitario_frete'].includes(col.key)
                   const isActive = romSortKey === col.key
-                  const displayLabel = col.key === 'valor_unitario_frete' ? `Vlr Unit Frete (R$/${unidadeExibicao})` : col.label
+                  const unitLabel = normalizeUnit(unidadeExibicao) === 'kg' ? 'kg' : unidadeExibicao
+                  const displayLabel = col.key === 'valor_unitario_frete' 
+                    ? `Vlr Unit Frete (R$/${unitLabel})` 
+                    : volumeKeys.includes(col.key) && normalizeUnit(unidadeExibicao) !== 'kg'
+                      ? `${col.label.replace(/ \(kg\)$/, '')} (${unitLabel})`
+                      : col.label
                   return (
                     <th key={col.key}
                       className={`px-4 py-3 font-semibold text-gray-600 cursor-pointer select-none hover:bg-gray-100 transition-colors ${isRight ? 'text-right' : 'text-left'}`}
