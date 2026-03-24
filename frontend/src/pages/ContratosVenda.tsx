@@ -594,9 +594,11 @@ export default function ContratosVenda() {
                   {form.arquivo_url && !selectedFile && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-green-600" />
-                          <span className="text-sm text-green-800 font-medium">Arquivo anexado</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                          <span className="text-sm text-green-800 font-medium truncate" title={decodeURIComponent(form.arquivo_url.split('/').pop() || 'Arquivo anexado')}>
+                            {decodeURIComponent(form.arquivo_url.split('/').pop() || 'Arquivo anexado').replace(/^\d+_/, '')}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <a href={form.arquivo_url} target="_blank" rel="noopener noreferrer" 

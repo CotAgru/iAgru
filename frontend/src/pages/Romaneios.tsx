@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown, ExternalLink, Package, Truck, Scale, Target, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown, ExternalLink, Package, Truck, Scale, Target, ArrowUp, ArrowDown, ArrowUpDown, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, getSafras, uploadRomaneioImage, getPrecos, syncRomaneioSafras } from '../services/api'
+import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, getSafras, uploadRomaneioImage, getPrecos, syncRomaneioSafras, getContratosVenda } from '../services/api'
 import ViewModal, { Field, Section } from '../components/ViewModal'
 import SearchableSelect from '../components/SearchableSelect'
 import MultiSearchableSelect from '../components/MultiSearchableSelect'
@@ -49,7 +49,7 @@ const emptyForm = {
   numero_ticket: '', tipo_ticket_id: '', nfe_numero: '', tipo_nf_id: '',
   data_saida_origem: '', data_entrada_destino: '', data_saida_destino: '',
   origem_id: '', destinatario_id: '', produtor_id: '', cnpj_cpf: '',
-  produto_id: '', veiculo_id: '', placa: '', motorista_id: '', transportadora_id: '', ano_safra_id: '',
+  produto_id: '', veiculo_id: '', placa: '', motorista_id: '', transportadora_id: '', ano_safra_id: '', contrato_venda_id: '',
   safra_ids: [] as string[],
   peso_bruto: '', tara: '', peso_liquido: '',
   umidade_perc: '', impureza_perc: '', avariados_perc: '',
@@ -74,6 +74,7 @@ export default function Romaneios() {
   const [anosSafra, setAnosSafra] = useState<any[]>([])
   const [safras, setSafras] = useState<any[]>([])
   const [precos, setPrecos] = useState<any[]>([])
+  const [contratosVenda, setContratosVenda] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -106,36 +107,37 @@ export default function Romaneios() {
     { key: 'peso_liq_cdesc', label: 'P.Líq c/desc', visible: true, order: 11 },
     { key: 'motorista', label: 'Motorista', visible: false, order: 12 },
     { key: 'transportadora', label: 'Transportadora', visible: false, order: 13 },
-    { key: 'ano_safra', label: 'Ano Safra', visible: false, order: 14 },
-    { key: 'tipo_ticket', label: 'Tipo Ticket', visible: false, order: 15 },
-    { key: 'tipo_nf', label: 'Tipo NF', visible: false, order: 16 },
-    { key: 'nfe', label: 'NF-e', visible: false, order: 17 },
-    { key: 'data_entrada_destino', label: 'Data Entrada Destino', visible: false, order: 18 },
-    { key: 'data_saida_destino', label: 'Data Saída Destino', visible: false, order: 19 },
-    { key: 'tempo_permanencia', label: 'Tempo Permanência', visible: false, order: 20 },
-    { key: 'cnpj_cpf', label: 'CNPJ/CPF', visible: false, order: 21 },
-    { key: 'peso_bruto', label: 'Peso Bruto', visible: false, order: 22 },
-    { key: 'tara', label: 'Tara', visible: false, order: 23 },
-    { key: 'peso_liquido', label: 'Peso Líquido', visible: false, order: 24 },
-    { key: 'umidade_perc', label: 'Umidade %', visible: false, order: 25 },
-    { key: 'impureza_perc', label: 'Impureza %', visible: false, order: 26 },
-    { key: 'avariados_perc', label: 'Avariados %', visible: false, order: 27 },
-    { key: 'ardidos_perc', label: 'Ardidos %', visible: false, order: 28 },
-    { key: 'esverdeados_perc', label: 'Esverdeados %', visible: false, order: 29 },
-    { key: 'partidos_perc', label: 'Partidos %', visible: false, order: 30 },
-    { key: 'quebrados_perc', label: 'Quebrados %', visible: false, order: 31 },
-    { key: 'umidade_desc', label: 'Desc. Umidade (kg)', visible: false, order: 32 },
-    { key: 'impureza_desc', label: 'Desc. Impureza (kg)', visible: false, order: 33 },
-    { key: 'avariados_desc', label: 'Desc. Avariados (kg)', visible: false, order: 34 },
-    { key: 'ardidos_desc', label: 'Desc. Ardidos (kg)', visible: false, order: 35 },
-    { key: 'esverdeados_desc', label: 'Desc. Esverdeados (kg)', visible: false, order: 36 },
-    { key: 'partidos_desc', label: 'Desc. Partidos (kg)', visible: false, order: 37 },
-    { key: 'quebrados_desc', label: 'Desc. Quebrados (kg)', visible: false, order: 38 },
-    { key: 'desconto_total', label: 'Desconto Total (kg)', visible: false, order: 39 },
-    { key: 'peso_corrigido', label: 'Peso Corrigido', visible: false, order: 40 },
-    { key: 'transgenia', label: 'Transgenia', visible: false, order: 41 },
-    { key: 'observacoes', label: 'Observações', visible: false, order: 42 },
-    { key: 'valor_frete', label: 'Valor Frete', visible: false, order: 43 },
+    { key: 'contrato_venda', label: 'Contrato Venda', visible: false, order: 14 },
+    { key: 'ano_safra', label: 'Ano Safra', visible: false, order: 15 },
+    { key: 'tipo_ticket', label: 'Tipo Ticket', visible: false, order: 16 },
+    { key: 'tipo_nf', label: 'Tipo NF', visible: false, order: 17 },
+    { key: 'nfe', label: 'NF-e', visible: false, order: 18 },
+    { key: 'data_entrada_destino', label: 'Data Entrada Destino', visible: false, order: 19 },
+    { key: 'data_saida_destino', label: 'Data Saída Destino', visible: false, order: 20 },
+    { key: 'tempo_permanencia', label: 'Tempo Permanência', visible: false, order: 21 },
+    { key: 'cnpj_cpf', label: 'CNPJ/CPF', visible: false, order: 22 },
+    { key: 'peso_bruto', label: 'Peso Bruto', visible: false, order: 23 },
+    { key: 'tara', label: 'Tara', visible: false, order: 24 },
+    { key: 'peso_liquido', label: 'Peso Líquido', visible: false, order: 25 },
+    { key: 'umidade_perc', label: 'Umidade %', visible: false, order: 26 },
+    { key: 'impureza_perc', label: 'Impureza %', visible: false, order: 27 },
+    { key: 'avariados_perc', label: 'Avariados %', visible: false, order: 28 },
+    { key: 'ardidos_perc', label: 'Ardidos %', visible: false, order: 29 },
+    { key: 'esverdeados_perc', label: 'Esverdeados %', visible: false, order: 30 },
+    { key: 'partidos_perc', label: 'Partidos %', visible: false, order: 31 },
+    { key: 'quebrados_perc', label: 'Quebrados %', visible: false, order: 32 },
+    { key: 'umidade_desc', label: 'Desc. Umidade (kg)', visible: false, order: 33 },
+    { key: 'impureza_desc', label: 'Desc. Impureza (kg)', visible: false, order: 34 },
+    { key: 'avariados_desc', label: 'Desc. Avariados (kg)', visible: false, order: 35 },
+    { key: 'ardidos_desc', label: 'Desc. Ardidos (kg)', visible: false, order: 36 },
+    { key: 'esverdeados_desc', label: 'Desc. Esverdeados (kg)', visible: false, order: 37 },
+    { key: 'partidos_desc', label: 'Desc. Partidos (kg)', visible: false, order: 38 },
+    { key: 'quebrados_desc', label: 'Desc. Quebrados (kg)', visible: false, order: 39 },
+    { key: 'desconto_total', label: 'Desconto Total (kg)', visible: false, order: 40 },
+    { key: 'peso_corrigido', label: 'Peso Corrigido', visible: false, order: 41 },
+    { key: 'transgenia', label: 'Transgenia', visible: false, order: 42 },
+    { key: 'observacoes', label: 'Observações', visible: false, order: 43 },
+    { key: 'valor_frete', label: 'Valor Frete', visible: false, order: 44 },
   ]
   const [columns, setColumns] = useState(() => {
     const saved = localStorage.getItem('romaneios_columns')
@@ -144,10 +146,10 @@ export default function Romaneios() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getRomaneios(), getOrdens(), getOperacoes(), getCadastros(), getVeiculos(), getProdutos(), getTiposNf(), getTiposTicket(), getAnosSafra(), getSafras().catch(() => []), getPrecos()])
-      .then(([r, o, ops, cad, veic, prod, tnf, tt, as_, sf, pr]) => {
+    Promise.all([getRomaneios(), getOrdens(), getOperacoes(), getCadastros(), getVeiculos(), getProdutos(), getTiposNf(), getTiposTicket(), getAnosSafra(), getSafras().catch(() => []), getPrecos(), getContratosVenda().catch(() => [])])
+      .then(([r, o, ops, cad, veic, prod, tnf, tt, as_, sf, pr, cv]) => {
         setItems(r); setOrdens(o); setOperacoes(ops); setCadastros(cad)
-        setVeiculos(veic); setProdutos(prod); setTiposNf(tnf); setTiposTicket(tt); setAnosSafra(as_); setSafras(sf); setPrecos(pr)
+        setVeiculos(veic); setProdutos(prod); setTiposNf(tnf); setTiposTicket(tt); setAnosSafra(as_); setSafras(sf); setPrecos(pr); setContratosVenda(cv)
       })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
@@ -243,7 +245,7 @@ export default function Romaneios() {
       produto_id: item.produto_id || '', veiculo_id: item.veiculo_id || '',
       placa: item.placa || '',
       motorista_id: item.motorista_id || '', transportadora_id: item.transportadora_id || '',
-      ano_safra_id: item.ano_safra_id || '',
+      ano_safra_id: item.ano_safra_id || '', contrato_venda_id: item.contrato_venda_id || '',
       safra_ids: item.safra_ids || [],
       peso_bruto: fmtKg(item.peso_bruto), tara: fmtKg(item.tara),
       peso_liquido: fmtKg(item.peso_liquido),
@@ -522,6 +524,8 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
     : motoristasList
 
   // Configuração de colunas
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
   const saveColumns = (cols: typeof columns) => {
     setColumns(cols)
     localStorage.setItem('romaneios_columns', JSON.stringify(cols))
@@ -530,9 +534,22 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
     const updated = columns.map((c: any) => c.key === key ? { ...c, visible: !c.visible } : c)
     saveColumns(updated)
   }
-  const setColumnOrder = (key: string, order: number) => {
-    const updated = columns.map((c: any) => c.key === key ? { ...c, order } : c)
-    saveColumns(updated)
+  const handleDragStart = (idx: number) => {
+    setDragIndex(idx)
+  }
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === idx) return
+    const sorted = [...columns].sort((a: any, b: any) => a.order - b.order)
+    const [moved] = sorted.splice(dragIndex, 1)
+    sorted.splice(idx, 0, moved)
+    const reordered = sorted.map((c: any, i: number) => ({ ...c, order: i + 1 }))
+    setColumns(reordered)
+    setDragIndex(idx)
+  }
+  const handleDragEnd = () => {
+    setDragIndex(null)
+    localStorage.setItem('romaneios_columns', JSON.stringify(columns))
   }
 
   // Obter valor de célula da tabela
@@ -551,6 +568,10 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'peso_liq_cdesc': return item.peso_corrigido ? fmtNum(item.peso_corrigido) : '-'
       case 'motorista': return item.motorista_id ? cadNome(item.motorista_id) : '-'
       case 'transportadora': return item.transportadora_id ? cadNome(item.transportadora_id) : '-'
+      case 'contrato_venda': {
+        const cv = contratosVenda.find(c => c.id === item.contrato_venda_id)
+        return cv ? `${cv.numero_contrato || 'S/N'} - ${cv.comprador?.nome_fantasia || cv.comprador?.nome || ''}` : '-'
+      }
       case 'ano_safra': return anosSafra.find(a => a.id === item.ano_safra_id)?.nome || '-'
       case 'tipo_ticket': return tiposTicket.find(t => t.id === item.tipo_ticket_id)?.nome || '-'
       case 'tipo_nf': return tiposNf.find(t => t.id === item.tipo_nf_id)?.nome || '-'
@@ -699,6 +720,10 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'peso_liq_cdesc': return item.peso_corrigido ?? 0
       case 'motorista': return item.motorista_id ? cadNome(item.motorista_id) : ''
       case 'transportadora': return item.transportadora_id ? cadNome(item.transportadora_id) : ''
+      case 'contrato_venda': {
+        const cv = contratosVenda.find(c => c.id === item.contrato_venda_id)
+        return cv ? `${cv.numero_contrato || ''}` : ''
+      }
       case 'ano_safra': return anosSafra.find(a => a.id === item.ano_safra_id)?.nome || ''
       case 'peso_bruto': return item.peso_bruto ?? 0
       case 'tara': return item.tara ?? 0
@@ -995,11 +1020,11 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Ano Safra</label>
-                  <SearchableSelect value={form.ano_safra_id} onChange={val => setForm({...form, ano_safra_id: val})}
-                    options={[{ value: '', label: 'Selecione...' }, ...anosSafra.filter((a: any) => a.ativo).map((a: any) => ({ value: a.id, label: a.nome }))]} placeholder="Ano Safra" />
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Contrato de Venda</label>
+                  <SearchableSelect value={form.contrato_venda_id} onChange={val => setForm({...form, contrato_venda_id: val})}
+                    options={[{ value: '', label: 'Nenhum' }, ...contratosVenda.map((cv: any) => ({ value: cv.id, label: `${cv.numero_contrato || 'S/N'} - ${cv.comprador?.nome_fantasia || cv.comprador?.nome || ''} (${cv.produtos?.nome || ''})` }))]} placeholder="Contrato de Venda" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Transgenia</label>
@@ -1198,6 +1223,7 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
               <Field label="CNPJ/CPF" value={viewingItem.cnpj_cpf} />
               <Field label="Produto" value={viewingItem.produto_id ? prodNome(viewingItem.produto_id) : viewingItem.produto} />
               <Field label="Ano Safra" value={anosSafra.find(a => a.id === viewingItem.ano_safra_id)?.nome} />
+              <Field label="Contrato Venda" value={(() => { const cv = contratosVenda.find(c => c.id === viewingItem.contrato_venda_id); return cv ? `${cv.numero_contrato || 'S/N'} - ${cv.comprador?.nome_fantasia || cv.comprador?.nome || ''}` : '-' })()} />
             </Section>
 
             <Section title="Transporte" icon={<Truck className="w-5 h-5" />}>
@@ -1281,34 +1307,50 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       {/* Modal configurador de colunas */}
       {showColumnConfig && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">Configurações de Colunas</h2>
               <button onClick={() => setShowColumnConfig(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div className="px-4 pt-3 pb-1">
+              <p className="text-xs text-gray-500">Arraste para reordenar. Marque o checkbox para exibir na tabela.</p>
+            </div>
             <div className="p-4 overflow-y-auto flex-1">
-              <p className="text-sm text-gray-600 mb-4">Selecione quais colunas exibir e defina a ordem (1 = primeira coluna):</p>
-              <div className="space-y-3">
-                {columns.map((col: any) => (
-                  <div key={col.key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <input type="checkbox" checked={col.visible} onChange={() => toggleColumn(col.key)}
-                      className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
-                    <label className="flex-1 font-medium text-gray-700">{col.label}</label>
-                    <input type="number" min="1" max="20" value={col.order}
-                      onChange={e => setColumnOrder(col.key, parseInt(e.target.value) || 1)}
-                      className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm" />
+              <div className="space-y-1">
+                {[...columns].sort((a: any, b: any) => a.order - b.order).map((col: any, idx: number) => (
+                  <div
+                    key={col.key}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all select-none ${
+                      dragIndex === idx ? 'bg-green-50 border-green-300 shadow-md scale-[1.02]' : 'bg-gray-50 border-transparent hover:bg-gray-100'
+                    } cursor-grab active:cursor-grabbing`}
+                  >
+                    <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumn(col.key)}
+                      className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500 flex-shrink-0"
+                    />
+                    <span className={`flex-1 text-sm ${col.visible ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
+                      {col.label}
+                    </span>
+                    <span className="text-xs text-gray-400 w-5 text-center">{idx + 1}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="flex justify-between gap-2 p-4 border-t">
-              <button onClick={() => { saveColumns(DEFAULT_COLUMNS); toast.success('Colunas restauradas para padrão') }}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button onClick={() => { saveColumns(DEFAULT_COLUMNS); localStorage.removeItem('romaneios_columns'); toast.success('Colunas restauradas para padrão') }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
                 Restaurar Padrão
               </button>
-              <button onClick={() => setShowColumnConfig(false)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              <button onClick={() => setShowColumnConfig(false)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
                 Fechar
               </button>
             </div>
