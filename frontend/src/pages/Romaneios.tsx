@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown, ExternalLink, Package, Truck, Scale, Target, ArrowUp, ArrowDown, ArrowUpDown, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, getSafras, uploadRomaneioImage, getPrecos, syncRomaneioSafras, getContratosVenda } from '../services/api'
+import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, getSafras, uploadRomaneioImage, getPrecos, syncRomaneioSafras, getContratosVenda, getUnidadesMedida } from '../services/api'
 import ViewModal, { Field, Section } from '../components/ViewModal'
 import SearchableSelect from '../components/SearchableSelect'
 import MultiSearchableSelect from '../components/MultiSearchableSelect'
@@ -75,6 +75,8 @@ export default function Romaneios() {
   const [safras, setSafras] = useState<any[]>([])
   const [precos, setPrecos] = useState<any[]>([])
   const [contratosVenda, setContratosVenda] = useState<any[]>([])
+  const [unidadesMedida, setUnidadesMedida] = useState<any[]>([])
+  const [unidadeExibicao, setUnidadeExibicao] = useState('tn')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
@@ -137,7 +139,8 @@ export default function Romaneios() {
     { key: 'peso_corrigido', label: 'Peso Corrigido', visible: false, order: 41 },
     { key: 'transgenia', label: 'Transgenia', visible: false, order: 42 },
     { key: 'observacoes', label: 'Observações', visible: false, order: 43 },
-    { key: 'valor_frete', label: 'Valor Frete', visible: false, order: 44 },
+    { key: 'valor_unitario_frete', label: 'Valor Unitário Frete', visible: false, order: 44 },
+    { key: 'valor_frete', label: 'Valor Frete', visible: false, order: 45 },
   ]
   const [columns, setColumns] = useState(() => {
     const saved = localStorage.getItem('romaneios_columns')
@@ -159,13 +162,55 @@ export default function Romaneios() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getRomaneios(), getOrdens(), getOperacoes(), getCadastros(), getVeiculos(), getProdutos(), getTiposNf(), getTiposTicket(), getAnosSafra(), getSafras().catch(() => []), getPrecos(), getContratosVenda().catch(() => [])])
-      .then(([r, o, ops, cad, veic, prod, tnf, tt, as_, sf, pr, cv]) => {
+    Promise.all([getRomaneios(), getOrdens(), getOperacoes(), getCadastros(), getVeiculos(), getProdutos(), getTiposNf(), getTiposTicket(), getAnosSafra(), getSafras().catch(() => []), getPrecos(), getContratosVenda().catch(() => []), getUnidadesMedida().catch(() => [])])
+      .then(([r, o, ops, cad, veic, prod, tnf, tt, as_, sf, pr, cv, um]) => {
         setItems(r); setOrdens(o); setOperacoes(ops); setCadastros(cad)
-        setVeiculos(veic); setProdutos(prod); setTiposNf(tnf); setTiposTicket(tt); setAnosSafra(as_); setSafras(sf); setPrecos(pr); setContratosVenda(cv)
+        setVeiculos(veic); setProdutos(prod); setTiposNf(tnf); setTiposTicket(tt); setAnosSafra(as_); setSafras(sf); setPrecos(pr); setContratosVenda(cv); setUnidadesMedida(um)
       })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
+  }
+
+  // Calcular valor unitário do frete com conversão de unidade
+  const calcularValorUnitarioFrete = (item: any, unidade: string): string => {
+    if (!item.ordem_id) return '-'
+    const ordem = ordens.find((o: any) => o.id === item.ordem_id)
+    if (!ordem?.preco_id) return '-'
+    const preco = precos.find((p: any) => p.id === ordem.preco_id)
+    if (!preco?.valor) return '-'
+    
+    let valorPorTn = 0
+    switch (preco.unidade_preco) {
+      case 'R$/ton':
+        valorPorTn = preco.valor
+        break
+      case 'R$/sc':
+        valorPorTn = preco.valor * (1000 / 60) // 1 ton = 16.67 sacas
+        break
+      case 'R$/viagem':
+      case 'R$/km':
+        return '-' // N/A para estas unidades
+      default:
+        return '-'
+    }
+    
+    // Converter para unidade solicitada
+    let valorConvertido = 0
+    switch (unidade.toLowerCase()) {
+      case 'tn':
+        valorConvertido = valorPorTn
+        break
+      case 'kg':
+        valorConvertido = valorPorTn / 1000
+        break
+      case 'sc':
+        valorConvertido = valorPorTn * (60 / 1000)
+        break
+      default:
+        return '-'
+    }
+    
+    return fmtBRL(valorConvertido)
   }
 
   // Cálculo automático de frete: peso × preço
@@ -359,18 +404,11 @@ export default function Romaneios() {
   }
 
   // Handler para campos desc (kg) com recálculo de desconto total e peso corrigido
-  const handleDescChange = (field: string, raw: string) => {
-    const digits = raw.replace(/\D/g, '')
-    const formatted = digits ? parseInt(digits, 10).toLocaleString('pt-BR') : ''
-    const next = { ...form, [field]: formatted }
-    const dt = calcDescontoTotal(next)
-    const pl = parseKg(next.peso_liquido) || 0
-    next.desconto_kg = dt > 0 ? fmtKg(dt) : ''
-    next.peso_corrigido = pl > 0 ? fmtKg(pl - dt) : ''
-    setForm(next)
+  const handleDescChange = (field: string, val: string) => {
+    // Aceitar decimais nos campos de desconto
+    handleKgChange(field, val)
   }
 
-  // Handler para campos percentuais: permite dígitos e vírgula
   const handlePercChange = (field: string, raw: string) => {
     let clean = raw.replace(/[^\d,]/g, '')
     const parts = clean.split(',')
@@ -625,6 +663,7 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       case 'transgenia': return item.transgenia || '-'
       case 'observacoes': return item.observacoes || '-'
       case 'cnpj_cpf': return item.cnpj_cpf || '-'
+      case 'valor_unitario_frete': return calcularValorUnitarioFrete(item, unidadeExibicao)
       case 'valor_frete': return calcularFrete(item).label
       case 'tempo_permanencia': {
         if (!item.data_entrada_destino || !item.data_saida_destino) return '-'
@@ -780,6 +819,12 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Romaneios</h1>
         <div className="flex gap-2">
+          <select value={unidadeExibicao} onChange={e => setUnidadeExibicao(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm font-medium bg-white">
+            {unidadesMedida.filter(u => u.ativo && u.grupo === 'sólido').map(u => (
+              <option key={u.id} value={u.simbolo}>{u.simbolo.toUpperCase()}</option>
+            ))}
+          </select>
           <ExportButtons
             onExportExcel={() => {
               const cols = visibleColumns.map((c: any) => ({ key: c.key, label: c.label, align: ['peso_liq_sdesc','peso_liq_cdesc','valor_frete'].includes(c.key) ? 'right' as const : 'left' as const }))
@@ -879,12 +924,13 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
                 {visibleColumns.map((col: any) => {
                   const isRight = ['peso_liq_sdesc','peso_liq_cdesc','peso_bruto','tara','peso_liquido','desconto_total','peso_corrigido'].includes(col.key)
                   const isActive = romSortKey === col.key
+                  const displayLabel = col.key === 'valor_unitario_frete' ? `Vlr Unit Frete (R$/${unidadeExibicao})` : col.label
                   return (
                     <th key={col.key}
                       className={`px-4 py-3 font-semibold text-gray-600 cursor-pointer select-none hover:bg-gray-100 transition-colors ${isRight ? 'text-right' : 'text-left'}`}
                       onClick={() => toggleRomSort(col.key)}>
                       <div className={`flex items-center gap-1 ${isRight ? 'justify-end' : ''}`}>
-                        <span>{col.label}</span>
+                        <span>{displayLabel}</span>
                         {isActive && romSortDir === 'asc' && <ArrowUp className="w-3.5 h-3.5 text-green-600" />}
                         {isActive && romSortDir === 'desc' && <ArrowDown className="w-3.5 h-3.5 text-green-600" />}
                         {!isActive && <ArrowUpDown className="w-3.5 h-3.5 text-gray-300" />}
