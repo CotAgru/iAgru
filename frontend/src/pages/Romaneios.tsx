@@ -207,7 +207,7 @@ export default function Romaneios() {
   // Definição de campos filtráveis (sistema de filtros avançados)
   const FILTER_FIELDS = [
     { key: 'operacao', label: 'Operação', type: 'select', options: () => operacoes.map(o => ({ value: o.id, label: o.nome })) },
-    { key: 'ordem', label: 'Ordem de Carregamento', type: 'select', options: () => ordens.map(o => ({ value: o.id, label: o.numero_ordem_fmt || o.numero_ordem })) },
+    { key: 'ordem', label: 'Ordem de Carregamento', type: 'select', options: () => ordens.map(o => ({ value: o.id, label: `#${o.numero_ordem_fmt || o.numero_ordem} - ${o.nome_ordem || ''} (${o.origem_nome} → ${o.destino_nome})` })) },
     { key: 'produtor', label: 'Produtor', type: 'select', options: () => produtoresList.map(p => ({ value: p.id, label: p.nome_fantasia || p.nome })) },
     { key: 'produto', label: 'Produto', type: 'select', options: () => produtos.map(p => ({ value: p.id, label: p.nome })) },
     { key: 'origem', label: 'Origem', type: 'select', options: () => origensList.map(o => ({ value: o.id, label: o.nome_fantasia || o.nome })) },
