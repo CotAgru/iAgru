@@ -204,7 +204,7 @@ export default function DashboardArmazem() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-100 rounded-lg"><TrendingDown className="w-5 h-5 text-orange-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">Quebra T\u00e9cnica Acumulada</p>
+              <p className="text-xs text-gray-500">Quebra Técnica Acumulada</p>
               <p className="text-lg font-bold text-orange-600">{fmtDec(conv(totalQuebraAcum))} {unidadeSel}</p>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function DashboardArmazem() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 rounded-lg"><CreditCard className="w-5 h-5 text-yellow-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">Cobran\u00e7as em Aberto</p>
+              <p className="text-xs text-gray-500">Cobranças em Aberto</p>
               <p className="text-lg font-bold text-yellow-700">{fmtBRL(totalCobAberto)}</p>
             </div>
           </div>
@@ -222,18 +222,18 @@ export default function DashboardArmazem() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg"><CreditCard className="w-5 h-5 text-green-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">Cobran\u00e7as Pagas</p>
+              <p className="text-xs text-gray-500">Cobranças Pagas</p>
               <p className="text-lg font-bold text-green-700">{fmtBRL(totalCobPago)}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Gr\u00e1ficos */}
+      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Movimenta\u00e7\u00e3o Mensal */}
+        {/* Movimentação Mensal */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Movimenta\u00e7\u00e3o Mensal ({unidadeSel})</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Movimentação Mensal ({unidadeSel})</h2>
           {movMensal.length === 0 ? (
             <p className="text-gray-400 text-center py-8">Sem dados</p>
           ) : (
@@ -245,7 +245,7 @@ export default function DashboardArmazem() {
                 <Tooltip formatter={(v: any) => fmtDec(Number(v))} />
                 <Legend />
                 <Bar dataKey="entradas" name="Entradas" fill="#059669" radius={[4,4,0,0]} />
-                <Bar dataKey="saidas" name="Sa\u00eddas" fill="#dc2626" radius={[4,4,0,0]} />
+                <Bar dataKey="saidas" name="Saídas" fill="#dc2626" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
