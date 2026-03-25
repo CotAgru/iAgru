@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import {
   getRomaneiosArmazem, createRomaneioArmazem, updateRomaneioArmazem, deleteRomaneioArmazem,
   getUnidadesArmazenadoras, getProdutos, getCadastros, getVeiculos, getAnosSafra, getSafras,
+  getContratosVenda,
 } from '../../services/api'
 import { fmtInt, fmtDec, fmtData } from '../../utils/format'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -23,6 +24,7 @@ export default function RomaneioSaida() {
   const [cadastros, setCadastros] = useState<any[]>([])
   const [veiculos, setVeiculos] = useState<any[]>([])
   const [anosSafra, setAnosSafra] = useState<any[]>([])
+  const [contratos, setContratos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -34,14 +36,15 @@ export default function RomaneioSaida() {
     transportadora_id: '', motorista_id: '', veiculo_id: '', placa: '',
     nfe_numero: '', nfe_serie: '', data_emissao: '',
     peso_bruto: '', tara: '', observacoes: '', status: 'expedido',
+    contrato_venda_id: '',
   })
 
   const load = async () => {
     setLoading(true)
     try {
-      const [r, u, p, c, v, a] = await Promise.all([
+      const [r, u, p, c, v, a, ct] = await Promise.all([
         getRomaneiosArmazem('saida'), getUnidadesArmazenadoras(), getProdutos(),
-        getCadastros(), getVeiculos(), getAnosSafra(),
+        getCadastros(), getVeiculos(), getAnosSafra(), getContratosVenda(),
       ])
       setRomaneios(r)
       setUnidades(u)
@@ -49,6 +52,7 @@ export default function RomaneioSaida() {
       setCadastros(c)
       setVeiculos(v)
       setAnosSafra(a)
+      setContratos(ct)
     } catch (e: any) { toast.error(e.message) }
     setLoading(false)
   }
@@ -59,6 +63,10 @@ export default function RomaneioSaida() {
   const transportadoraOpts = useMemo(() => cadastros.filter(c => (c.tipos || []).includes('Transportadora')).map(c => ({ value: c.id, label: c.nome_fantasia || c.nome })), [cadastros])
   const motoristaOpts = useMemo(() => cadastros.filter(c => (c.tipos || []).includes('Motorista')).map(c => ({ value: c.id, label: c.nome_fantasia || c.nome })), [cadastros])
   const veiculoOpts = useMemo(() => veiculos.map(v => ({ value: v.id, label: `${v.placa} - ${v.proprietario_nome || ''}` })), [veiculos])
+  const contratoOpts = useMemo(() => contratos.map((c: any) => ({
+    value: c.id,
+    label: `#${c.numero_contrato || '-'} — ${c.comprador_nome || ''} — ${c.produto_nome || ''} — ${c.volume_tons ? fmtKg(c.volume_tons * 1000) + ' kg' : ''}`,
+  })), [contratos])
 
   const openCreate = () => {
     setEditId(null)
@@ -67,6 +75,7 @@ export default function RomaneioSaida() {
       transportadora_id: '', motorista_id: '', veiculo_id: '', placa: '',
       nfe_numero: '', nfe_serie: '', data_emissao: new Date().toISOString().split('T')[0],
       peso_bruto: '', tara: '', observacoes: '', status: 'expedido',
+      contrato_venda_id: '',
     })
     setShowModal(true)
   }
@@ -81,6 +90,7 @@ export default function RomaneioSaida() {
       nfe_numero: r.nfe_numero || '', nfe_serie: r.nfe_serie || '', data_emissao: r.data_emissao || '',
       peso_bruto: r.peso_bruto ? String(r.peso_bruto) : '', tara: r.tara ? String(r.tara) : '',
       observacoes: r.observacoes || '', status: r.status || 'expedido',
+      contrato_venda_id: r.contrato_venda_id || '',
     })
     setShowModal(true)
   }
@@ -120,6 +130,7 @@ export default function RomaneioSaida() {
         status: form.status,
         observacoes: form.observacoes || null,
         data_hora_saida: new Date().toISOString(),
+        contrato_venda_id: form.contrato_venda_id || null,
       }
       if (editId) {
         await updateRomaneioArmazem(editId, payload)
@@ -292,6 +303,10 @@ export default function RomaneioSaida() {
                   <label className="block text-xs font-medium text-gray-600 mb-1">Peso Líquido</label>
                   <div className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold">{fmtKg(pesoLiquido)}</div>
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Contrato de Venda (vínculo ContAgru)</label>
+                <SearchableSelect options={contratoOpts} value={form.contrato_venda_id} onChange={v => setForm({ ...form, contrato_venda_id: v })} placeholder="Vincular contrato de venda..." />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

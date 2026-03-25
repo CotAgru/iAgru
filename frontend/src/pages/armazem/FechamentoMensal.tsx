@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, Filter, Printer } from 'lucide-react'
+import { FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, Filter, Printer, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import {
   getRomaneiosArmazem, getCobrancas, getQuebraTecnica,
   getUnidadesArmazenadoras, getProdutos, getCadastros,
@@ -169,6 +171,87 @@ export default function FechamentoMensal() {
     window.print()
   }
 
+  const handleExportPDF = (row?: ExtratoRow) => {
+    const doc = new jsPDF()
+    const titulo = row
+      ? `Extrato — ${row.depositante_nome} — ${mesLabel}`
+      : `Fechamento Mensal — ${mesLabel}`
+
+    doc.setFontSize(14)
+    doc.text(titulo, 14, 18)
+    doc.setFontSize(8)
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 24)
+
+    if (row) {
+      // Extrato individual
+      doc.setFontSize(10)
+      doc.text(`Depositante: ${row.depositante_nome}`, 14, 34)
+      doc.text(`Entradas: ${fmtDec(conv(row.entradas_kg))} ${unidadeSel}  |  Saídas: ${fmtDec(conv(row.saidas_kg))} ${unidadeSel}  |  Quebra: ${fmtDec(conv(row.quebra_kg))} ${unidadeSel}  |  Saldo: ${fmtDec(conv(row.saldo_kg))} ${unidadeSel}`, 14, 40)
+
+      // Cobranças do depositante
+      const cobDep = (mesAno
+        ? cobrancas.filter(c => c.periodo_inicio && c.periodo_inicio >= mesInicio! && c.periodo_inicio <= mesFim!)
+        : cobrancas
+      ).filter(c => c.depositante_id === row.depositante_id)
+
+      if (cobDep.length > 0) {
+        autoTable(doc, {
+          startY: 46,
+          head: [['Categoria', 'Descrição', 'Volume (kg)', 'Valor Unit.', 'Valor Total', 'Status']],
+          body: cobDep.map((c: any) => [
+            c.categoria || '',
+            c.descricao || '',
+            c.volume_base ? fmtDec(c.volume_base) : '',
+            c.valor_unitario ? fmtBRL(c.valor_unitario) : '',
+            c.valor_total ? fmtBRL(c.valor_total) : '',
+            c.status || '',
+          ]),
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [217, 119, 6] },
+        })
+      }
+
+      const totalCob = cobDep.reduce((s: number, c: any) => s + (c.valor_total || 0), 0)
+      const finalY = (doc as any).lastAutoTable?.finalY || 60
+      doc.setFontSize(10)
+      doc.text(`Total Cobranças: ${fmtBRL(totalCob)}`, 14, finalY + 8)
+    } else {
+      // Resumo geral
+      autoTable(doc, {
+        startY: 30,
+        head: [['Depositante', `Entradas (${unidadeSel})`, `Saídas (${unidadeSel})`, `Quebra (${unidadeSel})`, `Saldo (${unidadeSel})`, 'Cobranças (R$)', 'Pago (R$)', 'Em Aberto (R$)']],
+        body: sorted.map(r => [
+          r.depositante_nome,
+          fmtDec(conv(r.entradas_kg)),
+          fmtDec(conv(r.saidas_kg)),
+          fmtDec(conv(r.quebra_kg)),
+          fmtDec(conv(r.saldo_kg)),
+          fmtBRL(r.total_cobrancas),
+          fmtBRL(r.total_pago),
+          fmtBRL(r.total_aberto),
+        ]),
+        foot: [[
+          `TOTAL (${sorted.length})`,
+          fmtDec(conv(totais.entradas_kg)),
+          fmtDec(conv(totais.saidas_kg)),
+          fmtDec(conv(totais.quebra_kg)),
+          fmtDec(conv(totais.saldo_kg)),
+          fmtBRL(totais.total_cobrancas),
+          fmtBRL(totais.total_pago),
+          fmtBRL(totais.total_aberto),
+        ]],
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [217, 119, 6] },
+        footStyles: { fillColor: [245, 245, 245], textColor: [0, 0, 0], fontStyle: 'bold' },
+      })
+    }
+
+    const nomeArq = row
+      ? `extrato-${row.depositante_nome.replace(/\s/g, '_')}-${mesAno}.pdf`
+      : `fechamento-${mesAno}.pdf`
+    doc.save(nomeArq)
+  }
+
   const SortHeader = ({ label, col }: { label: string; col: string }) => (
     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap"
       onClick={() => setSort({ col, dir: sort.col === col && sort.dir === 'asc' ? 'desc' : 'asc' })}>
@@ -198,6 +281,9 @@ export default function FechamentoMensal() {
               {u}
             </button>
           ))}
+          <button onClick={() => handleExportPDF()} className="flex items-center gap-1 bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-amber-700" title="Exportar PDF">
+            <Download className="w-4 h-4" /> PDF
+          </button>
           <button onClick={handlePrint} className="p-2 border rounded-lg hover:bg-gray-100" title="Imprimir">
             <Printer className="w-4 h-4 text-gray-600" />
           </button>
@@ -263,7 +349,12 @@ export default function FechamentoMensal() {
                 {expandedId === row.depositante_id && (
                   <tr key={`${row.depositante_id}-det`}>
                     <td colSpan={8} className="bg-amber-50/50 px-4 py-3">
-                      <h3 className="text-xs font-semibold text-gray-700 mb-2">Cobranças do mês — {row.depositante_nome}</h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-semibold text-gray-700">Cobranças do mês — {row.depositante_nome}</h3>
+                        <button onClick={(e) => { e.stopPropagation(); handleExportPDF(row) }} className="flex items-center gap-1 bg-amber-600 text-white px-2 py-1 rounded text-xs hover:bg-amber-700">
+                          <Download className="w-3 h-3" /> PDF Extrato
+                        </button>
+                      </div>
                       {cobDetalhe.length === 0 ? (
                         <p className="text-xs text-gray-400">Nenhuma cobrança no período</p>
                       ) : (

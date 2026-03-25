@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   getRomaneiosArmazem, createRomaneioArmazem, updateRomaneioArmazem, deleteRomaneioArmazem,
   getUnidadesArmazenadoras, getEstruturasByUnidade, getProdutos, getCadastros, getVeiculos,
-  getAnosSafra, getSafras, getTabelasDescontoPorProduto, getFaixasDesconto,
+  getAnosSafra, getSafras, getTabelasDescontoPorProduto, getFaixasDesconto, getRomaneios,
 } from '../../services/api'
 import { fmtInt, fmtDec, fmtData } from '../../utils/format'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -37,6 +37,7 @@ export default function RomaneioEntrada() {
   const [veiculos, setVeiculos] = useState<any[]>([])
   const [anosSafra, setAnosSafra] = useState<any[]>([])
   const [safras, setSafras] = useState<any[]>([])
+  const [romaneiosFrete, setRomaneiosFrete] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -50,7 +51,13 @@ export default function RomaneioEntrada() {
     peso_bruto: '', tara: '', umidade_perc: '', impureza_perc: '', avariados_perc: '',
     ardidos_perc: '', esverdeados_perc: '', partidos_perc: '', quebrados_perc: '',
     transgenia: '', observacoes: '', status: 'recebido',
+    romaneio_frete_id: '',
   })
+
+  const romaneioFreteOpts = useMemo(() => romaneiosFrete.map((r: any) => ({
+    value: r.id,
+    label: `#${r.numero_romaneio || '-'} — ${r.ordem_nome || 'S/Ordem'} — ${r.placa || 'S/Placa'} — ${fmtKg(r.peso_liquido)} kg`,
+  })), [romaneiosFrete])
 
   // Descontos calculados (display only)
   const [descontos, setDescontos] = useState({
@@ -65,9 +72,9 @@ export default function RomaneioEntrada() {
   const load = async () => {
     setLoading(true)
     try {
-      const [r, u, p, c, v, a, s] = await Promise.all([
+      const [r, u, p, c, v, a, s, rf] = await Promise.all([
         getRomaneiosArmazem('entrada'), getUnidadesArmazenadoras(), getProdutos(),
-        getCadastros(), getVeiculos(), getAnosSafra(), getSafras(),
+        getCadastros(), getVeiculos(), getAnosSafra(), getSafras(), getRomaneios(),
       ])
       setRomaneios(r)
       setUnidades(u)
@@ -76,6 +83,7 @@ export default function RomaneioEntrada() {
       setVeiculos(v)
       setAnosSafra(a)
       setSafras(s)
+      setRomaneiosFrete(rf)
     } catch (e: any) { toast.error(e.message) }
     setLoading(false)
   }
@@ -181,6 +189,7 @@ export default function RomaneioEntrada() {
       peso_bruto: '', tara: '', umidade_perc: '', impureza_perc: '', avariados_perc: '',
       ardidos_perc: '', esverdeados_perc: '', partidos_perc: '', quebrados_perc: '',
       transgenia: '', observacoes: '', status: 'recebido',
+      romaneio_frete_id: '',
     })
     setShowModal(true)
   }
@@ -202,6 +211,7 @@ export default function RomaneioEntrada() {
       partidos_perc: r.partidos_perc != null ? String(r.partidos_perc).replace('.', ',') : '',
       quebrados_perc: r.quebrados_perc != null ? String(r.quebrados_perc).replace('.', ',') : '',
       transgenia: r.transgenia || '', observacoes: r.observacoes || '', status: r.status || 'recebido',
+      romaneio_frete_id: r.romaneio_frete_id || '',
     })
     setShowModal(true)
   }
@@ -249,6 +259,7 @@ export default function RomaneioEntrada() {
         status: form.status,
         observacoes: form.observacoes || null,
         data_hora_entrada: new Date().toISOString(),
+        romaneio_frete_id: form.romaneio_frete_id || null,
       }
       if (editId) {
         await updateRomaneioArmazem(editId, payload)
@@ -446,6 +457,10 @@ export default function RomaneioEntrada() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Placa</label>
                     <input value={form.placa} onChange={e => setForm({ ...form, placa: e.target.value.toUpperCase() })} className="w-full border rounded-lg px-3 py-2 text-sm" maxLength={8} />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Romaneio FretAgru (vínculo)</label>
+                  <SearchableSelect options={romaneioFreteOpts} value={form.romaneio_frete_id} onChange={v => setForm({ ...form, romaneio_frete_id: v })} placeholder="Vincular romaneio de frete..." />
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, X, Table2, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, Copy } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Table2, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, Copy, Upload } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
 import { getTabelasDesconto, createTabelaDesconto, updateTabelaDesconto, deleteTabelaDesconto, getFaixasDesconto, createFaixaDesconto, deleteFaixaDesconto, deleteFaixasDescontoPorTabela, getProdutos, getAnosSafra } from '../../services/api'
 import { fmtDec } from '../../utils/format'
@@ -162,6 +163,42 @@ export default function TabelasDesconto() {
     } catch (e: any) { toast.error(e.message) }
   }
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!expandedId) return toast.error('Expanda uma tabela antes de importar')
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const data = await file.arrayBuffer()
+      const wb = XLSX.read(data, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows: any[] = XLSX.utils.sheet_to_json(ws)
+
+      if (rows.length === 0) return toast.error('Planilha vazia')
+
+      // Detectar colunas (aceita variações)
+      const grauKey = Object.keys(rows[0]).find(k => /grau|teor|%/i.test(k)) || Object.keys(rows[0])[0]
+      const descKey = Object.keys(rows[0]).find(k => /desc|desconto|perc/i.test(k)) || Object.keys(rows[0])[1]
+
+      if (!grauKey || !descKey) return toast.error('Colunas não encontradas. Use: grau | desconto')
+
+      const parsed: { grau: number; desconto: number }[] = []
+      for (const row of rows) {
+        const grau = typeof row[grauKey] === 'number' ? row[grauKey] : parseFloat(String(row[grauKey]).replace(',', '.'))
+        const desconto = typeof row[descKey] === 'number' ? row[descKey] : parseFloat(String(row[descKey]).replace(',', '.'))
+        if (!isNaN(grau) && !isNaN(desconto)) parsed.push({ grau, desconto })
+      }
+
+      if (parsed.length === 0) return toast.error('Nenhuma faixa válida encontrada na planilha')
+
+      for (const f of parsed) {
+        await createFaixaDesconto({ tabela_id: expandedId, ...f })
+      }
+      toast.success(`${parsed.length} faixas importadas do Excel`)
+      loadFaixas(expandedId)
+    } catch (err: any) { toast.error('Erro ao ler planilha: ' + err.message) }
+    e.target.value = ''
+  }
+
   const handleClearFaixas = async () => {
     if (!expandedId) return
     if (!confirm('Excluir TODAS as faixas desta tabela?')) return
@@ -241,6 +278,10 @@ export default function TabelasDesconto() {
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-semibold text-gray-700">Faixas de Desconto ({faixas.length})</h3>
                         <div className="flex gap-2">
+                          <label className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 cursor-pointer">
+                            <Upload className="w-3 h-3" /> Importar Excel
+                            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleImportExcel} className="hidden" />
+                          </label>
                           <button onClick={openBulkAdd} className="flex items-center gap-1 bg-amber-600 text-white px-2 py-1 rounded text-xs hover:bg-amber-700">
                             <Plus className="w-3 h-3" /> Adicionar Faixas
                           </button>
