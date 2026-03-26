@@ -28,6 +28,9 @@ O FretAgru gerencia todo o ciclo de fretes agrícolas: desde o planejamento (ope
 - **Vinculação**: romaneio ↔ contrato de venda (ContAgru)
 - **Exportação**: PDF e Excel em todas as tabelas
 - **Romaneio PDF Individual**: Botão "Exportar PDF" no modal de detalhes gera documento oficial formatado com cabeçalho, seções organizadas (identificação, rota, produtor, transporte, pesagem, descontos, valor do frete), rodapé e branding iAgru
+- **Anexar PDFs e Imagens**: Suporte completo para anexar imagens ou PDFs aos romaneios via botão "Anexar Arquivo" ou "Tirar Foto", com upload automático ao Supabase Storage bucket `romaneios-img`
+- **Preview Inteligente**: Card azul diferenciado para PDFs mostrando nome do arquivo, imagem preview para fotos, consistente entre formulário de edição e modal de visualização
+- **OCR com IA**: Digitalização automática de romaneios em papel usando Gemini AI (apenas para imagens), extração de campos: ticket, pesos, descontos, datas, CNPJs
 
 ## Lógicas Complexas
 

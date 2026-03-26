@@ -34,7 +34,7 @@ A iAgru é uma plataforma modular que reúne ferramentas de gestão agrícola em
 | **Ícones** | Lucide React |
 | **Gráficos** | Recharts |
 | **Banco de Dados** | Supabase (PostgreSQL gerenciado) |
-| **Storage** | Supabase Storage (imagens de romaneios) |
+| **Storage** | Supabase Storage (imagens e PDFs de romaneios) |
 | **Deploy** | Vercel (frontend) |
 | **Exportação** | xlsx + jsPDF (Excel e PDF) |
 
