@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown, ExternalLink, Package, Truck, Scale, Target, ArrowUp, ArrowDown, ArrowUpDown, GripVertical } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Camera, Upload, Loader2, FileText, Sparkles, Settings, ZoomIn, Filter, ChevronDown, ExternalLink, Package, Truck, Scale, Target, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getRomaneios, createRomaneio, updateRomaneio, deleteRomaneio, getOrdens, getOperacoes, getCadastros, getVeiculos, getProdutos, getTiposNf, getTiposTicket, getAnosSafra, getSafras, uploadRomaneioImage, getPrecos, syncRomaneioSafras, getContratosVenda, getUnidadesMedida } from '../../services/api'
 import ViewModal, { Field, Section } from '../../components/ViewModal'
@@ -8,7 +8,7 @@ import MultiSearchableSelect from '../../components/MultiSearchableSelect'
 import { fmtData, fmtInt, fmtBRL } from '../../utils/format'
 import Pagination, { usePagination } from '../../components/Pagination'
 import ExportButtons from '../../components/ExportButtons'
-import { exportToPDF, exportToExcel } from '../../utils/export'
+import { exportToPDF, exportToExcel, generateRomaneioPDF } from '../../utils/export'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 
@@ -610,6 +610,34 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
   const cadNome = (id: string) => { const c = cadastros.find((x: any) => x.id === id); return c?.nome_fantasia || c?.nome || '' }
   const prodNome = (id: string) => { const p = produtos.find((x: any) => x.id === id); return p?.nome || '' }
   const veicPlaca = (id: string) => { const v = veiculos.find((x: any) => x.id === id); return v?.placa || '' }
+
+  // Exportar romaneio individual como PDF
+  const handleExportPDF = (romaneio: any) => {
+    const frete = calcularFrete(romaneio)
+    const ordem = ordens.find((o: any) => o.id === romaneio.ordem_id)
+    const preco = ordem?.preco_id ? precos.find((p: any) => p.id === ordem.preco_id) : null
+    const cv = contratosVenda.find(c => c.id === romaneio.contrato_venda_id)
+
+    generateRomaneioPDF(romaneio, {
+      operacaoNome: operacoes.find(o => o.id === romaneio.operacao_id)?.nome,
+      ordemNome: romaneio.ordem_nome,
+      origemNome: romaneio.origem_id ? cadNome(romaneio.origem_id) : undefined,
+      destinoNome: romaneio.destinatario_id ? cadNome(romaneio.destinatario_id) : undefined,
+      produtorNome: romaneio.produtor_id ? cadNome(romaneio.produtor_id) : romaneio.produtor,
+      produtoNome: romaneio.produto_id ? prodNome(romaneio.produto_id) : romaneio.produto,
+      placaNome: romaneio.veiculo_id ? veicPlaca(romaneio.veiculo_id) : romaneio.placa,
+      motoristaNome: romaneio.motorista_id ? cadNome(romaneio.motorista_id) : undefined,
+      transportadoraNome: romaneio.transportadora_id ? cadNome(romaneio.transportadora_id) : undefined,
+      anoSafraNome: anosSafra.find(a => a.id === romaneio.ano_safra_id)?.nome,
+      tipoTicketNome: tiposTicket.find(t => t.id === romaneio.tipo_ticket_id)?.nome,
+      tipoNfNome: tiposNf.find(t => t.id === romaneio.tipo_nf_id)?.nome,
+      contratoVendaNome: cv ? `${cv.numero_contrato || 'S/N'} - ${cv.comprador?.nome_fantasia || cv.comprador?.nome || ''}` : undefined,
+      valorFrete: frete.valor !== null ? frete.label : undefined,
+      precoContratado: preco ? `${fmtBRL(preco.valor)} ${preco.unidade_preco}` : undefined,
+    })
+    
+    toast.success('PDF do romaneio gerado com sucesso!')
+  }
 
   // Veículos filtrados pelo motorista/transportadora selecionados
   const veiculosFiltrados = form.motorista_id
@@ -1328,6 +1356,16 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
         isOpen={!!viewingItem}
         onClose={() => setViewingItem(null)}
         onEdit={() => { openEdit(viewingItem); setViewingItem(null) }}
+        extraButtons={
+          viewingItem && (
+            <button
+              onClick={() => handleExportPDF(viewingItem)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-md transition-all"
+            >
+              <FileDown className="w-4 h-4" /> Exportar PDF
+            </button>
+          )
+        }
       >
         {viewingItem && (
           <>

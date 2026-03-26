@@ -6,9 +6,10 @@ interface ViewModalProps {
   onClose: () => void
   onEdit: () => void
   children: React.ReactNode
+  extraButtons?: React.ReactNode
 }
 
-export default function ViewModal({ title, isOpen, onClose, onEdit, children }: ViewModalProps) {
+export default function ViewModal({ title, isOpen, onClose, onEdit, children, extraButtons }: ViewModalProps) {
   if (!isOpen) return null
 
   return (
@@ -22,11 +23,14 @@ export default function ViewModal({ title, isOpen, onClose, onEdit, children }: 
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
-          {/* Botão Editar - Destaque mobile */}
-          <button onClick={onEdit}
-            className="mt-3 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg hover:bg-blue-50 font-semibold shadow-md transition-all">
-            <Pencil className="w-4 h-4" /> Editar Lançamento
-          </button>
+          {/* Botões de ação */}
+          <div className="mt-3 flex flex-col sm:flex-row gap-2">
+            <button onClick={onEdit}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg hover:bg-blue-50 font-semibold shadow-md transition-all">
+              <Pencil className="w-4 h-4" /> Editar Lançamento
+            </button>
+            {extraButtons}
+          </div>
         </div>
         
         {/* Content - Scroll otimizado */}

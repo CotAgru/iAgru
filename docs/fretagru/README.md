@@ -27,6 +27,7 @@ O FretAgru gerencia todo o ciclo de fretes agrícolas: desde o planejamento (ope
 - **Importação Excel**: Wizard 7 etapas com mapeamento de colunas, preview e validação
 - **Vinculação**: romaneio ↔ contrato de venda (ContAgru)
 - **Exportação**: PDF e Excel em todas as tabelas
+- **Romaneio PDF Individual**: Botão "Exportar PDF" no modal de detalhes gera documento oficial formatado com cabeçalho, seções organizadas (identificação, rota, produtor, transporte, pesagem, descontos, valor do frete), rodapé e branding iAgru
 
 ## Lógicas Complexas
 
