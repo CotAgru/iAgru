@@ -125,6 +125,8 @@ export default function Romaneios() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [fileName, setFileName] = useState<string>('')
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [showColumnConfig, setShowColumnConfig] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const pagination = usePagination(25)
@@ -328,7 +330,16 @@ export default function Romaneios() {
     setSearchTerm('')
   }
 
-  const openNew = () => { setEditing(null); setForm(emptyForm); setImagePreview(null); setImageError(false); setShowForm(true) }
+  const openNew = () => { 
+    setEditing(null); 
+    setForm(emptyForm); 
+    setImagePreview(null); 
+    setImageError(false); 
+    setFileName(''); 
+    if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    setPdfBlobUrl(null);
+    setShowForm(true) 
+  }
   const openEdit = (item: any) => {
     setEditing(item)
     setForm({
@@ -467,6 +478,14 @@ export default function Romaneios() {
 
   const handleImageSelect = async (file: File) => {
     const isPdf = file.type === 'application/pdf'
+    setFileName(file.name)
+    
+    // Se for PDF, criar Blob URL para preview
+    if (isPdf) {
+      const blobUrl = URL.createObjectURL(file)
+      setPdfBlobUrl(blobUrl)
+    }
+    
     const reader = new FileReader()
     reader.onload = async (e) => {
       const base64 = (e.target?.result as string)
@@ -475,7 +494,7 @@ export default function Romaneios() {
       // OCR só para imagens, não para PDF
       if (!isPdf && GEMINI_API_KEY) { await processOCR(base64) }
       else if (!isPdf) { toast('Defina VITE_GEMINI_API_KEY para OCR automático', { icon: 'ℹ️' }) }
-      else { toast.success('PDF anexado com sucesso') }
+      else { toast.success(`PDF "${file.name}" anexado (será salvo ao confirmar o romaneio)`) }
     }
     reader.readAsDataURL(file)
   }
@@ -1120,12 +1139,12 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
                   <div className="mt-3 relative">
                     {imagePreview.startsWith('data:application/pdf') || imagePreview.endsWith('.pdf') ? (
                       <div className="relative group">
-                        <a href={imagePreview} target="_blank" rel="noopener noreferrer"
+                        <a href={pdfBlobUrl || imagePreview} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-lg hover:bg-red-100 transition-colors">
                           <FileText className="w-8 h-8 text-red-600" />
                           <div className="flex-1">
-                            <p className="font-semibold text-gray-900">Documento PDF anexado</p>
-                            <p className="text-sm text-gray-600">Clique para visualizar em nova aba</p>
+                            <p className="font-semibold text-gray-900">{fileName || 'Documento PDF anexado'}</p>
+                            <p className="text-sm text-gray-600">Clique para visualizar • Será salvo ao confirmar romaneio</p>
                           </div>
                           <ExternalLink className="w-5 h-5 text-red-600" />
                         </a>
@@ -1148,6 +1167,9 @@ Use 0 para campos numéricos não encontrados e "" para textos. Pesos em KG inte
                       type="button" 
                       onClick={() => {
                         setImagePreview(null)
+                        setFileName('')
+                        if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl)
+                        setPdfBlobUrl(null)
                         setForm(prev => ({ ...prev, imagem_url: null }))
                         toast.success('Arquivo removido')
                       }}
