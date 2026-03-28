@@ -22,7 +22,14 @@ O FretAgru gerencia todo o ciclo de fretes agrícolas: desde o planejamento (ope
 
 - **7 tipos de desconto** nos romaneios: umidade, impureza, avariados, ardidos, esverdeados, partidos, quebrados
 - **Cálculo automático**: peso corrigido = peso líquido - descontos
-- **BI Dashboard**: Volume s/Desconto vs c/Desconto, Frete Excedente por rota, Análise de descontos por origem
+- **🎯 BI Dashboard Interligado (estilo Power BI)**:
+  - **9 filtros globais**: Ano Safra, Safra, Produto, Origem, Destino, Transportadora, Motorista, Placa, Tipo Ticket
+  - **Header de filtros ativos**: Badges azuis clicáveis mostrando filtros aplicados, remoção individual com X, botão "Limpar Tudo"
+  - **Gráficos clicáveis**: Clicar em qualquer fatia/barra aplica filtro automaticamente (Tipo Ticket, Volume por Produto)
+  - **Tabelas clicáveis**: Clicar em linha aplica filtro (Transportadora, Motorista, Placa, Rotas)
+  - **4 gráficos**: Volume mensal, Valor frete mensal, Volume por produto, Tipo Ticket
+  - **5 KPIs**: Total Viagens, Vol. s/Desc, Vol. c/Desc, Vlr Unit Médio, Vlr Total a Pagar
+  - Frete Excedente por rota, Análise de descontos por origem
 - **Seletor de unidade**: KG/SC/TN com reconversão de volumes
 - **Importação Excel**: Wizard 7 etapas com mapeamento de colunas, preview e validação
 - **Vinculação**: romaneio ↔ contrato de venda (ContAgru)

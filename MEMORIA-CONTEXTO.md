@@ -309,6 +309,38 @@ Clique 2 → Crescente (↑)
 Clique 3 → Sem ordenação (↕)
 ```
 
+### Sistema de Filtros Interligados (Dashboard FretAgru)
+
+**Inspiração:** Power BI - todos os elementos reagem simultaneamente aos filtros.
+
+**Arquitetura:**
+- **9 filtros globais**: Ano Safra, Safra, Produto, Origem, Destino, Transportadora, Motorista, Placa, Tipo Ticket
+- **Estado centralizado**: Cada filtro é um `useState` que alimenta `filteredRomaneios` via `useMemo`
+- **Header de filtros ativos**: Badges azuis com nome do filtro + valor, X para remover individual, botão "Limpar Tudo"
+- **Propagação automática**: Qualquer alteração em filtro recalcula KPIs, gráficos e tabelas instantaneamente
+
+**Elementos clicáveis para filtrar:**
+1. **Gráfico Tipo Ticket** (PieChart) → onClick aplica `setFiltroTipoTicket(data.id)`
+2. **Gráfico Volume por Produto** (PieChart) → onClick aplica `setFiltroProduto(data.id)`
+3. **Tabela Transportadora/Placa/Motorista** → onClick na linha aplica filtro correspondente
+4. **Tabela Rotas** → onClick aplica `setFiltroOrigem` + `setFiltroDestino`
+
+**Implementação técnica:**
+```typescript
+// Filtro global aplicado a todos elementos
+const filteredRomaneios = useMemo(() => {
+  return romaneios.filter((r: any) => {
+    if (filtroAnoSafra && r.ano_safra_id !== filtroAnoSafra) return false
+    if (filtroSafra && !r.safra_ids?.includes(filtroSafra)) return false
+    // ... outros filtros
+    return true
+  })
+}, [romaneios, filtroAnoSafra, filtroSafra, ...])
+
+// KPIs, gráficos e tabelas dependem de filteredRomaneios
+const kpis = useMemo(() => { /* cálculos */ }, [filteredRomaneios, ...])
+```
+
 ### Componentes Reutilizáveis
 
 | Componente | Uso |

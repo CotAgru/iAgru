@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Truck, Scale, TrendingUp, DollarSign, FileText, Loader2, Filter, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, MapPin, BarChart3, AlertTriangle, Droplets } from 'lucide-react'
-import { getCadastros, getVeiculos, getProdutos, getPrecos, getOrdens, getRomaneios, getOperacoes, getAnosSafra, getSafras } from '../../services/api'
+import { getCadastros, getVeiculos, getProdutos, getPrecos, getOrdens, getRomaneios, getOperacoes, getAnosSafra, getSafras, getTiposTicket } from '../../services/api'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts'
 import { fmtInt, fmtDec, fmtBRL } from '../../utils/format'
 
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [operacoes, setOperacoes] = useState<any[]>([])
   const [anosSafra, setAnosSafra] = useState<any[]>([])
   const [safras, setSafras] = useState<any[]>([])
+  const [tiposTicket, setTiposTicket] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filtros globais
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const [filtroMotorista, setFiltroMotorista] = useState<string>('')
   const [filtroPlaca, setFiltroPlaca] = useState<string>('')
   const [filtroProduto, setFiltroProduto] = useState<string>('')
+  const [filtroTipoTicket, setFiltroTipoTicket] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
 
   // Unidade de exibição
@@ -89,9 +91,10 @@ export default function Dashboard() {
       getOperacoes().catch(() => []),
       getAnosSafra().catch(() => []),
       getSafras().catch(() => []),
-    ]).then(([c, v, p, pr, o, r, ops, as_, sf]) => {
+      getTiposTicket().catch(() => []),
+    ]).then(([c, v, p, pr, o, r, ops, as_, sf, tt]) => {
       setCadastros(c); setVeiculos(v); setProdutos(p); setPrecos(pr)
-      setOrdens(o); setRomaneios(r); setOperacoes(ops); setAnosSafra(as_); setSafras(sf)
+      setOrdens(o); setRomaneios(r); setOperacoes(ops); setAnosSafra(as_); setSafras(sf); setTiposTicket(tt)
       setLoading(false)
     })
   }, [])
@@ -135,15 +138,16 @@ export default function Dashboard() {
         if (!veic || veic.placa !== filtroPlaca) return false
       }
       if (filtroProduto && r.produto_id !== filtroProduto) return false
+      if (filtroTipoTicket && r.tipo_ticket_id !== filtroTipoTicket) return false
       return true
     })
-  }, [romaneios, filtroAnoSafra, filtroSafra, filtroOrigem, filtroDestino, filtroTransportadora, filtroMotorista, filtroPlaca, filtroProduto, veiculos])
+  }, [romaneios, filtroAnoSafra, filtroSafra, filtroOrigem, filtroDestino, filtroTransportadora, filtroMotorista, filtroPlaca, filtroProduto, filtroTipoTicket, veiculos])
 
-  const activeFiltersCount = [filtroAnoSafra, filtroSafra, filtroOrigem, filtroDestino, filtroTransportadora, filtroMotorista, filtroPlaca, filtroProduto].filter(Boolean).length
+  const activeFiltersCount = [filtroAnoSafra, filtroSafra, filtroOrigem, filtroDestino, filtroTransportadora, filtroMotorista, filtroPlaca, filtroProduto, filtroTipoTicket].filter(Boolean).length
 
   const clearFilters = () => {
     setFiltroAnoSafra(''); setFiltroSafra(''); setFiltroOrigem(''); setFiltroDestino('')
-    setFiltroTransportadora(''); setFiltroMotorista(''); setFiltroPlaca(''); setFiltroProduto('')
+    setFiltroTransportadora(''); setFiltroMotorista(''); setFiltroPlaca(''); setFiltroProduto(''); setFiltroTipoTicket('')
   }
 
   // KPIs
@@ -327,24 +331,27 @@ export default function Dashboard() {
 
   // Peso por produto
   const pesoPorProduto = useMemo(() => {
-    const mapa: Record<string, { nome: string; peso: number }> = {}
+    const mapa: Record<string, { nome: string; peso: number; id: string | null }> = {}
     filteredRomaneios.forEach((r: any) => {
       const prod = r.produto_id ? produtos.find((p: any) => p.id === r.produto_id) : null
       const nome = prod?.nome || r.produto || 'Outros'
-      if (!mapa[nome]) mapa[nome] = { nome, peso: 0 }
+      if (!mapa[nome]) mapa[nome] = { nome, peso: 0, id: prod?.id || null }
       mapa[nome].peso += (r.peso_liquido || 0)
     })
     return Object.values(mapa).sort((a, b) => b.peso - a.peso).slice(0, 8)
-      .map(item => ({ name: item.nome, value: Math.round(convertVol(item.peso, unidadeBI) * 100) / 100 }))
+      .map(item => ({ name: item.nome, value: Math.round(convertVol(item.peso, unidadeBI) * 100) / 100, id: item.id }))
   }, [filteredRomaneios, produtos, unidadeBI])
 
-  // Status das ordens
-  const statusOrdens = useMemo(() => {
+  // Tipo de Ticket (usando filteredRomaneios)
+  const tipoTicketDados = useMemo(() => {
     const mapa: Record<string, number> = {}
-    ordens.forEach((o: any) => { mapa[o.status] = (mapa[o.status] || 0) + 1 })
-    const labels: Record<string, string> = { pendente: 'Pendente', em_andamento: 'Em Andamento', concluido: 'Concluído', cancelado: 'Cancelado' }
-    return Object.entries(mapa).map(([k, v]) => ({ name: labels[k] || k, value: v }))
-  }, [ordens])
+    filteredRomaneios.forEach((r: any) => {
+      const tipo = tiposTicket.find(t => t.id === r.tipo_ticket_id)
+      const nome = tipo?.nome || 'Sem Tipo'
+      mapa[nome] = (mapa[nome] || 0) + 1
+    })
+    return Object.entries(mapa).map(([k, v]) => ({ name: k, value: v, id: tiposTicket.find(t => t.nome === k)?.id || null }))
+  }, [filteredRomaneios, tiposTicket])
 
   const toggleSort = (key: string) => {
     if (sortKey === key) {
@@ -430,6 +437,72 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Filtros Ativos (estilo Power BI) */}
+      {activeFiltersCount > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-blue-700 uppercase">Filtros Ativos:</span>
+            {filtroAnoSafra && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Ano Safra: {anosSafra.find(a => a.id === filtroAnoSafra)?.nome}</span>
+                <button onClick={() => setFiltroAnoSafra('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroSafra && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Safra: {safras.find(s => s.id === filtroSafra)?.nome}</span>
+                <button onClick={() => setFiltroSafra('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroProduto && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Produto: {produtos.find(p => p.id === filtroProduto)?.nome}</span>
+                <button onClick={() => setFiltroProduto('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroOrigem && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Origem: {cadNome(filtroOrigem, cadastros)}</span>
+                <button onClick={() => setFiltroOrigem('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroDestino && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Destino: {cadNome(filtroDestino, cadastros)}</span>
+                <button onClick={() => setFiltroDestino('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroTransportadora && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Transportadora: {cadNome(filtroTransportadora, cadastros)}</span>
+                <button onClick={() => setFiltroTransportadora('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroMotorista && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Motorista: {cadNome(filtroMotorista, cadastros)}</span>
+                <button onClick={() => setFiltroMotorista('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroPlaca && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Placa: {filtroPlaca}</span>
+                <button onClick={() => setFiltroPlaca('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            {filtroTipoTicket && (
+              <div className="flex items-center gap-1 bg-white border border-blue-300 rounded-full px-3 py-1 text-xs font-medium text-blue-800">
+                <span>Tipo Ticket: {tiposTicket.find(t => t.id === filtroTipoTicket)?.nome}</span>
+                <button onClick={() => setFiltroTipoTicket('')} className="ml-1 hover:bg-blue-100 rounded-full p-0.5"><X className="w-3 h-3" /></button>
+              </div>
+            )}
+            <button onClick={clearFilters} className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors">
+              <X className="w-3 h-3" /> Limpar Tudo
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Painel de filtros */}
       {showFilters && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 animate-in fade-in">
@@ -450,6 +523,8 @@ export default function Dashboard() {
               options={motoristasList.map(c => ({ value: c.id, label: c.nome }))} />
             <FilterSelect label="Placa" value={filtroPlaca} onChange={v => setFiltroPlaca(v)}
               options={placasList.map(v => ({ value: v.placa, label: v.placa }))} />
+            <FilterSelect label="Tipo Ticket" value={filtroTipoTicket} onChange={setFiltroTipoTicket}
+              options={tiposTicket.map(t => ({ value: t.id, label: t.nome }))} />
           </div>
         </div>
       )}
@@ -557,8 +632,9 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={pesoPorProduto} cx="50%" cy="50%" outerRadius={90} innerRadius={45} paddingAngle={2} dataKey="value"
-                      label={({ name, value }) => `${name}: ${fmtDec(value, 2)}`}>
-                      {pesoPorProduto.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      label={({ name, value }) => `${name}: ${fmtDec(value, 2)}`}
+                      onClick={(data: any) => { if (data.id) { setFiltroProduto(data.id); setShowFilters(true) } }}>
+                      {pesoPorProduto.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} className="cursor-pointer hover:opacity-80" />)}
                     </Pie>
                     <Tooltip formatter={(v: any) => `${fmtDec(v, 2)} ${uLabel}`} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -567,21 +643,22 @@ export default function Dashboard() {
               ) : <p className="text-gray-400 text-sm text-center py-12">Sem dados</p>}
             </div>
 
-            {/* Status ordens */}
+            {/* Tipo Ticket */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Status das Ordens</h3>
-              {statusOrdens.length > 0 ? (
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Tipo Ticket</h3>
+              {tipoTicketDados.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie data={statusOrdens} cx="50%" cy="50%" outerRadius={90} innerRadius={50} paddingAngle={3} dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}>
-                      {statusOrdens.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    <Pie data={tipoTicketDados} cx="50%" cy="50%" outerRadius={90} innerRadius={50} paddingAngle={3} dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      onClick={(data: any) => { if (data.id) { setFiltroTipoTicket(data.id); setShowFilters(true) } }}>
+                      {tipoTicketDados.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} className="cursor-pointer hover:opacity-80" />)}
                     </Pie>
                     <Tooltip />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : <p className="text-gray-400 text-sm text-center py-12">Sem ordens</p>}
+              ) : <p className="text-gray-400 text-sm text-center py-12">Sem dados</p>}
             </div>
           </div>
         </>

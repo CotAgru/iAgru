@@ -45,16 +45,16 @@ O **iAgru** é uma plataforma modular unificada para gestão do produtor rural b
   - **⚠️ BASE DE CÁLCULO DO FRETE:** SEMPRE peso líquido (sem desconto), NUNCA peso corrigido
 - **Veículos** — Cadastro de caminhões/placas
 - **Preços Contratados** — Tabela de preços por rota + cálculo de distância (Google Maps)
-- **Dashboard BI FretAgru** — BI completo estilo Power BI:
-  - 5 KPIs: Total Viagens, Vol. s/Desc, Vol. c/Desc, Vlr Unit Médio, Vlr Total a Pagar
+- **Dashboard BI FretAgru** — BI completo **INTERLIGADO** estilo Power BI:
+  - 5 KPIs reativos aos filtros: Total Viagens, Vol. s/Desc, Vol. c/Desc, Vlr Unit Médio, Vlr Total a Pagar
   - Seletor de unidade KG/SC/TN (padrão SC)
-  - 8 filtros globais interativos (Ano Safra, Safra, Produto, Origem, Destino, Transportadora, Motorista, Placa)
-  - 4 gráficos: Volume mensal, Valor frete mensal, Volume por produto, Status ordens
-  - Tabela analítica por Transportadora/Placa/Motorista com ordenação
-  - Tabela por Rota (Origem → Destino)
+  - **9 filtros globais interativos**: Ano Safra, Safra, Produto, Origem, Destino, Transportadora, Motorista, Placa, **Tipo Ticket**
+  - **🎯 Header de Filtros Ativos**: Badges azuis mostrando filtros aplicados, remoção individual com X, botão "Limpar Tudo"
+  - **4 gráficos CLICÁVEIS**: Volume mensal, Valor frete mensal, Volume por produto (clique → filtra), **Tipo Ticket** (clique → filtra)
+  - **Tabelas clicáveis**: Transportadora/Placa/Motorista (clique na linha → filtra), Rotas (clique → filtra origem + destino)
   - Análise de Descontos por Origem (7 tipos abertos, % desconto com badges)
   - Frete Excedente — Custo do Volume Não Vendável (mini-cards + tabela por rota)
-  - Todas as linhas clicáveis → filtram automaticamente
+  - **Sistema totalmente interligado**: Qualquer clique em gráfico ou tabela aplica filtro, todos os elementos reagem simultaneamente
 
 ### 2.3 Módulo ContAgru (Gestão de Contratos)
 - **Contratos de Venda** — Commodities: comprador, corretor, produto, safra, volume, preço, modalidade (FOB/CIF), status
