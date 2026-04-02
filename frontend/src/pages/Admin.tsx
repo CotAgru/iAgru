@@ -7,10 +7,11 @@ import {
   getTiposCaminhao, createTipoCaminhao, updateTipoCaminhao, deleteTipoCaminhao,
   getUnidadesMedida, createUnidadeMedida, updateUnidadeMedida, deleteUnidadeMedida,
   getTiposContrato, createTipoContrato, updateTipoContrato, deleteTipoContrato,
+  getTiposArmazem, createTipoArmazem, updateTipoArmazem, deleteTipoArmazem,
 } from '../services/api'
 import { fmtInt, fmtDec } from '../utils/format'
 
-type Tab = 'tipos_nf' | 'tipos_ticket' | 'tipos_caminhao' | 'unidades_medida' | 'tipos_contrato'
+type Tab = 'tipos_nf' | 'tipos_ticket' | 'tipos_caminhao' | 'unidades_medida' | 'tipos_contrato' | 'tipos_armazem'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'tipos_nf', label: 'Tipo NF' },
@@ -18,6 +19,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'tipos_caminhao', label: 'Tipo Caminhão' },
   { key: 'unidades_medida', label: 'Unidade de Medida' },
   { key: 'tipos_contrato', label: 'Tipo Contrato Venda' },
+  { key: 'tipos_armazem', label: 'Tipo Armazém' },
 ]
 
 const GRUPOS_UNIDADE = ['sólido', 'líquido', 'unitário']
@@ -84,6 +86,7 @@ export default function Admin() {
   const [tiposCaminhao, setTiposCaminhao] = useState<any[]>([])
   const [unidadesMedida, setUnidadesMedida] = useState<any[]>([])
   const [tiposContrato, setTiposContrato] = useState<any[]>([])
+  const [tiposArmazem, setTiposArmazem] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
@@ -103,8 +106,8 @@ export default function Admin() {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getTiposNf(), getTiposTicket(), getTiposCaminhao(), getUnidadesMedida().catch(() => []), getTiposContrato().catch(() => [])])
-      .then(([tn, tt, tc, um, tcon]) => { setTiposNf(tn); setTiposTicket(tt); setTiposCaminhao(tc); setUnidadesMedida(um); setTiposContrato(tcon) })
+    Promise.all([getTiposNf(), getTiposTicket(), getTiposCaminhao(), getUnidadesMedida().catch(() => []), getTiposContrato().catch(() => []), getTiposArmazem().catch(() => [])])
+      .then(([tn, tt, tc, um, tcon, tarm]) => { setTiposNf(tn); setTiposTicket(tt); setTiposCaminhao(tc); setUnidadesMedida(um); setTiposContrato(tcon); setTiposArmazem(tarm) })
       .catch(() => toast.error('Erro ao carregar'))
       .finally(() => setLoading(false))
   }
@@ -144,6 +147,8 @@ export default function Admin() {
       } else if (tab === 'tipos_contrato') {
         payload.descricao = formDescricao || null
         payload.cor = formCor || null
+      } else if (tab === 'tipos_armazem') {
+        payload.descricao = formDescricao || null
       }
       if (tab === 'tipos_nf') {
         if (editing) await updateTipoNf(editing.id, payload)
@@ -160,6 +165,9 @@ export default function Admin() {
       } else if (tab === 'tipos_contrato') {
         if (editing) await updateTipoContrato(editing.id, payload)
         else await createTipoContrato(payload)
+      } else if (tab === 'tipos_armazem') {
+        if (editing) await updateTipoArmazem(editing.id, payload)
+        else await createTipoArmazem(payload)
       }
       toast.success(editing ? 'Atualizado!' : 'Criado!')
       setShowForm(false); load()
@@ -175,11 +183,12 @@ export default function Admin() {
       else if (tab === 'tipos_caminhao') await deleteTipoCaminhao(id)
       else if (tab === 'unidades_medida') await deleteUnidadeMedida(id)
       else if (tab === 'tipos_contrato') await deleteTipoContrato(id)
+      else if (tab === 'tipos_armazem') await deleteTipoArmazem(id)
       toast.success('Removido!'); load()
     } catch { toast.error('Erro ao remover') }
   }
 
-  const currentItems = tab === 'tipos_nf' ? tiposNf : tab === 'tipos_ticket' ? tiposTicket : tab === 'tipos_caminhao' ? tiposCaminhao : tab === 'unidades_medida' ? unidadesMedida : tiposContrato
+  const currentItems = tab === 'tipos_nf' ? tiposNf : tab === 'tipos_ticket' ? tiposTicket : tab === 'tipos_caminhao' ? tiposCaminhao : tab === 'unidades_medida' ? unidadesMedida : tab === 'tipos_contrato' ? tiposContrato : tiposArmazem
   const currentLabel = TABS.find(t => t.key === tab)?.label || ''
 
   const extraColumns = tab === 'tipos_caminhao'
@@ -194,6 +203,10 @@ export default function Admin() {
         { key: 'fator_conversao', label: 'Fator Conversão', align: 'right' as const, render: (item: any) => fmtDec(item.fator_conversao, 6) },
       ]
     : tab === 'tipos_contrato'
+    ? [
+        { key: 'descricao', label: 'Descrição', render: (item: any) => item.descricao || '-' },
+      ]
+    : tab === 'tipos_armazem'
     ? [
         { key: 'descricao', label: 'Descrição', render: (item: any) => item.descricao || '-' },
       ]
@@ -300,6 +313,16 @@ export default function Admin() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
                     <input type="text" value={formDescricao} onChange={e => setFormDescricao(e.target.value)}
                       placeholder="Ex: Contrato com preço fixado"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                </>
+              )}
+              {tab === 'tipos_armazem' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                    <input type="text" value={formDescricao} onChange={e => setFormDescricao(e.target.value)}
+                      placeholder="Ex: Estrutura convencional de armazenamento"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                   </div>
                 </>
