@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Plus, Pencil, Trash2, X, Search, Loader2, MapPin, CarFront, ChevronDown, FileSpreadsheet, Merge } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getCadastros, createCadastro, updateCadastro, deleteCadastro, createVeiculo, getVeiculos, getTiposCaminhao, getUnidadesArmazenadoras, createUnidadeArmazenadora, updateUnidadeArmazenadora } from '../services/api'
@@ -108,6 +109,7 @@ function MapCenterUpdater({ cidade, uf }: { cidade: string; uf: string }) {
 }
 
 export default function Cadastros() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<Cadastro[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -156,6 +158,31 @@ export default function Cadastros() {
       .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+
+  // Detectar parâmetros da URL para abrir modal automaticamente
+  useEffect(() => {
+    const novoArmazem = searchParams.get('novo')
+    const editarId = searchParams.get('editar')
+    
+    if (novoArmazem === 'armazem' && !showForm) {
+      // Abrir modal de novo cadastro com tipo Armazem pré-selecionado
+      setEditing(null)
+      setForm({ ...emptyForm, tipos: ['Armazem'] })
+      setShowForm(true)
+      // Limpar parâmetro da URL
+      searchParams.delete('novo')
+      setSearchParams(searchParams, { replace: true })
+    } else if (editarId && items.length > 0 && !showForm) {
+      // Abrir modal de edição do cadastro
+      const itemToEdit = items.find(i => i.id === editarId)
+      if (itemToEdit) {
+        openEdit(itemToEdit)
+        // Limpar parâmetro da URL
+        searchParams.delete('editar')
+        setSearchParams(searchParams, { replace: true })
+      }
+    }
+  }, [searchParams, items, showForm])
 
   // Carregar UFs do IBGE
   useEffect(() => {
