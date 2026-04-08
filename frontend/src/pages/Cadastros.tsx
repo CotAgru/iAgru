@@ -312,7 +312,8 @@ export default function Cadastros() {
     if (!form.cidade) { toast.error('Cidade é obrigatória'); return }
     if (form.tipos.length === 0) { toast.error('Selecione pelo menos um Tipo'); return }
     
-    // Criar payload SEM os campos de armazém (que vão para unidades_armazenadoras)
+    // IMPORTANTE: Separar campos de armazém do payload principal
+    // Os campos armazem_* devem ir apenas para unidades_armazenadoras, não para cadastros
     const { armazem_sigla, armazem_tipo, armazem_capacidade_tons, ...dadosCadastro } = form
     
     const payload = {
