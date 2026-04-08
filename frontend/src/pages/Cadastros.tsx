@@ -339,6 +339,7 @@ export default function Cadastros() {
       if (mostraArmazem && cadastroId) {
         const armazemPayload = {
           cadastro_id: cadastroId,
+          nome: form.nome || form.nome_fantasia || 'Armazém',
           sigla: form.armazem_sigla || null,
           tipo: form.armazem_tipo,
           capacidade_total_tons: form.armazem_capacidade_tons ? Number(form.armazem_capacidade_tons) : null,
